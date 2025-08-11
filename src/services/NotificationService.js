@@ -12,7 +12,7 @@ class NotificationService {
 
   initEmailTransporter() {
     if (config.env.ENABLE_EMAIL_NOTIFICATIONS && config.env.EMAIL_HOST) {
-      this.emailTransporter = nodemailer.createTransporter({
+      this.emailTransporter = nodemailer.createTransport({
         host: config.env.EMAIL_HOST,
         port: config.env.EMAIL_PORT,
         secure: config.env.EMAIL_PORT === 465,
