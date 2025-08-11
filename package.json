@@ -1,0 +1,61 @@
+{
+  "name": "restaurant-booker",
+  "version": "1.0.0",
+  "description": "Automated restaurant table booking system with AirMenus integration",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "book": "node src/booker.js",
+    "book-interactive": "node src/interactive.js",
+    "book-batch": "node src/batch-booker.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "restaurant",
+    "booking",
+    "automation",
+    "airmenus",
+    "reservation",
+    "table-booking"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^21.5.2",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "commander": "^11.1.0",
+    "inquirer": "^9.2.12",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.7",
+    "crypto-js": "^4.2.0",
+    "moment": "^2.29.4",
+    "winston": "^3.11.0",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.1",
+    "node-notifier": "^10.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.54.0",
+    "nodemon": "^3.0.1",
+    "@types/node": "^20.9.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/restaurant-booker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/restaurant-booker/issues"
+  },
+  "homepage": "https://github.com/yourusername/restaurant-booker#readme"
+}

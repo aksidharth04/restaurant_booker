@@ -1,0 +1,56 @@
+{
+  "booking": {
+    "defaultGuests": 2,
+    "defaultTime": "19:00",
+    "preferredTimes": ["18:00", "19:00", "20:00", "21:00"],
+    "maxGuests": 20,
+    "bookingWindowDays": 30,
+    "advanceBookingHours": 24
+  },
+  "retry": {
+    "maxAttempts": 3,
+    "delayMs": 2000,
+    "backoffMultiplier": 1.5
+  },
+  "notifications": {
+    "email": {
+      "enabled": true,
+      "template": "default"
+    },
+    "push": {
+      "enabled": true
+    },
+    "desktop": {
+      "enabled": true
+    }
+  },
+  "favorites": [
+    {
+      "name": "The Grand Restaurant",
+      "url": "https://airmenus.com/restaurant/the-grand",
+      "preferredTime": "19:30",
+      "preferredGuests": 4
+    },
+    {
+      "name": "Cafe Luna",
+      "url": "https://airmenus.com/restaurant/cafe-luna",
+      "preferredTime": "20:00",
+      "preferredGuests": 2
+    }
+  ],
+  "browser": {
+    "headless": true,
+    "timeout": 30000,
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "logging": {
+    "level": "info",
+    "file": "./logs/booker.log",
+    "maxSize": "10m",
+    "maxFiles": 5
+  }
+}
