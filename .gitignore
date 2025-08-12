@@ -11,25 +11,17 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Configuration files with sensitive data
-config.json
-
-# Database files
-data/
-*.db
-*.sqlite
-*.sqlite3
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
 
 # Logs
 logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
 
 # Runtime data
-pids
+pids/
 *.pid
 *.seed
 *.pid.lock
@@ -41,23 +33,8 @@ coverage/
 # nyc test coverage
 .nyc_output
 
-# Grunt intermediate storage
-.grunt
-
-# Bower dependency directory
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
-# Compiled binary addons
-build/Release
-
 # Dependency directories
 jspm_packages/
-
-# TypeScript cache
-*.tsbuildinfo
 
 # Optional npm cache directory
 .npm
@@ -80,7 +57,7 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# parcel-bundler cache
+# parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
 
@@ -119,15 +96,29 @@ temp/
 ehthumbs.db
 Thumbs.db
 
-# Browser automation artifacts
-screenshots/
-downloads/
-user-data-dir/
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
-# Booking results
-batch-results-*.json
-bookings-template.json
+# Uploads (keep structure but ignore content)
+setuai/setuai-backend/uploads/*
+!setuai/setuai-backend/uploads/.gitkeep
 
-# Test files
-test-results/
+# Prisma
+setuai/setuai-backend/prisma/migrations/
+
+# Local development
+*.local
+
+# Testing
 coverage/
+.nyc_output/
+
+# Production
+build/
+dist/
+
+# Misc
+*.tgz
+*.tar.gz
