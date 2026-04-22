@@ -1,7 +1,6 @@
 const { describe, it, expect, beforeEach, afterEach } = require('@jest/globals');
 const moment = require('moment');
 const config = require('../src/config');
-const BookingModel = require('../src/models/Booking');
 
 describe('Restaurant Booker Tests', () => {
   beforeEach(() => {

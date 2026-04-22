@@ -4,7 +4,6 @@ const { Command } = require('commander');
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
-const ora = require('ora');
 const moment = require('moment');
 const config = require('./config');
 const logger = require('./utils/logger');
@@ -13,9 +12,16 @@ const AirMenusBooker = require('./services/AirMenusBooker');
 const NotificationService = require('./services/NotificationService');
 
 class BatchBooker {
-  constructor() {
-    this.booker = new AirMenusBooker();
-    this.setupCLI();
+  constructor(options = {}) {
+    this.config = options.config || config;
+    this.bookingModel = options.bookingModel || BookingModel;
+    this.notificationService = options.notificationService || NotificationService;
+    this.bookerFactory = options.bookerFactory || (() => new AirMenusBooker());
+    this.spinnerFactory = options.spinnerFactory || ((text) => require('ora')(text).start());
+
+    if (options.autoParse !== false) {
+      this.setupCLI();
+    }
   }
 
   setupCLI() {
@@ -30,7 +36,7 @@ class BatchBooker {
       .command('book')
       .description('Book multiple tables from a JSON file')
       .requiredOption('-f, --file <path>', 'Path to JSON file with booking data')
-      .option('--parallel <number>', 'Number of parallel bookings', '3')
+      .option('--parallel <number>', 'Number of parallel bookings', '1')
       .option('--delay <ms>', 'Delay between bookings in milliseconds', '5000')
       .option('--no-retry', 'Disable retry logic')
       .option('--no-notifications', 'Disable notifications')
@@ -50,11 +56,11 @@ class BatchBooker {
   }
 
   async batchBook(options) {
-    const spinner = ora('Loading booking data...').start();
+    const spinner = this.spinnerFactory('Loading booking data...');
     
     try {
       // Validate configuration
-      config.validate();
+      this.config.validate();
       spinner.text = 'Configuration validated';
 
       // Load and validate booking data
@@ -64,14 +70,6 @@ class BatchBooker {
       // Validate all bookings
       this.validateBookings(bookings);
       spinner.text = 'All bookings validated';
-
-      // Initialize browser
-      await this.booker.init();
-      spinner.text = 'Browser initialized';
-
-      // Login once for all bookings
-      await this.booker.login();
-      spinner.text = 'Logged into AirMenus';
 
       // Process bookings
       const results = await this.processBookings(bookings, options, spinner);
@@ -84,8 +82,6 @@ class BatchBooker {
       logger.error('Batch booking process failed', { error: error.message, stack: error.stack });
       console.error(chalk.red(`Error: ${error.message}`));
       process.exit(1);
-    } finally {
-      await this.booker.close();
     }
   }
 
@@ -143,8 +139,8 @@ class BatchBooker {
       throw new Error('Invalid time format. Use HH:MM');
     }
 
-    if (booking.guests < 1 || booking.guests > config.getBookingConfig().maxGuests) {
-      throw new Error(`Number of guests must be between 1 and ${config.getBookingConfig().maxGuests}`);
+    if (booking.guests < 1 || booking.guests > this.config.getBookingConfig().maxGuests) {
+      throw new Error(`Number of guests must be between 1 and ${this.config.getBookingConfig().maxGuests}`);
     }
 
     const bookingDate = moment(booking.date);
@@ -154,15 +150,15 @@ class BatchBooker {
       throw new Error('Cannot book for past dates');
     }
 
-    const maxBookingDate = moment().add(config.getBookingConfig().bookingWindowDays, 'days');
+    const maxBookingDate = moment().add(this.config.getBookingConfig().bookingWindowDays, 'days');
     if (bookingDate.isAfter(maxBookingDate)) {
-      throw new Error(`Cannot book more than ${config.getBookingConfig().bookingWindowDays} days in advance`);
+      throw new Error(`Cannot book more than ${this.config.getBookingConfig().bookingWindowDays} days in advance`);
     }
   }
 
   async processBookings(bookings, options, spinner) {
-    const parallelLimit = parseInt(options.parallel);
-    const delay = parseInt(options.delay);
+    const parallelLimit = Math.max(1, parseInt(options.parallel, 10) || 1);
+    const delay = Math.max(0, parseInt(options.delay, 10) || 0);
     const results = {
       successful: [],
       failed: [],
@@ -190,7 +186,7 @@ class BatchBooker {
         } else {
           results.failed.push({
             ...booking,
-            error: result.reason?.message || 'Unknown error'
+            error: result.value?.error || result.reason?.message || 'Unknown error'
           });
         }
       });
@@ -209,12 +205,16 @@ class BatchBooker {
   }
 
   async processSingleBooking(bookingData, options) {
+    const booker = this.bookerFactory();
+
     try {
       // Create booking record
-      const bookingRecord = await BookingModel.create(bookingData);
+      const bookingRecord = await this.bookingModel.create(bookingData);
+      await booker.init();
+      await booker.login();
 
       // Attempt booking with retry logic
-      const retryConfig = config.getRetryConfig();
+      const retryConfig = this.config.getRetryConfig();
       const maxAttempts = options.retry !== false ? retryConfig.maxAttempts : 1;
       let lastError = null;
 
@@ -226,16 +226,16 @@ class BatchBooker {
             await new Promise(resolve => setTimeout(resolve, delay));
           }
 
-          const result = await this.booker.bookTable(bookingData);
+          const result = await booker.bookTable(bookingData);
           
           // Success!
-          await BookingModel.updateStatus(bookingRecord.id, 'confirmed', result.confirmationNumber);
+          await this.bookingModel.updateStatus(bookingRecord.id, 'confirmed', result.confirmationNumber);
           
           logger.bookingSuccess(result.confirmationNumber, bookingData.restaurantName, bookingData.date, bookingData.time, bookingData.guests);
           
           // Send notification if enabled
           if (options.notifications !== false) {
-            await NotificationService.sendBookingSuccess({
+            await this.notificationService.sendBookingSuccess({
               ...bookingData,
               confirmationNumber: result.confirmationNumber
             });
@@ -258,11 +258,11 @@ class BatchBooker {
       }
 
       // All attempts failed
-      await BookingModel.updateStatus(bookingRecord.id, 'failed');
+      await this.bookingModel.updateStatus(bookingRecord.id, 'failed');
       logger.bookingFailed(bookingData.restaurantName, bookingData.date, bookingData.time, bookingData.guests, lastError);
       
       if (options.notifications !== false) {
-        await NotificationService.sendBookingFailure(bookingData, lastError);
+        await this.notificationService.sendBookingFailure(bookingData, lastError);
       }
 
       throw lastError;
@@ -272,6 +272,8 @@ class BatchBooker {
         success: false,
         error: error.message
       };
+    } finally {
+      await booker.close();
     }
   }
 
@@ -329,7 +331,7 @@ class BatchBooker {
       {
         "restaurantName": "Example Restaurant",
         "restaurantUrl": "https://airmenus.com/restaurant/example",
-        "date": "2024-01-15",
+        "date": moment().add(1, 'day').format('YYYY-MM-DD'),
         "time": "19:00",
         "guests": 4,
         "notes": "Optional notes about this booking"
@@ -337,7 +339,7 @@ class BatchBooker {
       {
         "restaurantName": "Another Restaurant",
         "restaurantUrl": "https://airmenus.com/restaurant/another",
-        "date": "2024-01-16",
+        "date": moment().add(2, 'days').format('YYYY-MM-DD'),
         "time": "20:00",
         "guests": 2
       }
@@ -347,7 +349,7 @@ class BatchBooker {
       fs.writeFileSync(options.output, JSON.stringify(template, null, 2));
       console.log(chalk.green(`✅ Template generated: ${options.output}`));
       console.log(chalk.gray('\nEdit the file with your booking details and run:'));
-      console.log(chalk.cyan(`npm run book-batch -- --file ${options.output}`));
+      console.log(chalk.cyan(`npm run book-batch -- book --file ${options.output}`));
     } catch (error) {
       console.error(chalk.red(`Error generating template: ${error.message}`));
       process.exit(1);
@@ -355,5 +357,8 @@ class BatchBooker {
   }
 }
 
-// Initialize and run the batch booker
-const batchBooker = new BatchBooker();
+if (require.main === module) {
+  new BatchBooker();
+}
+
+module.exports = BatchBooker;

@@ -2,7 +2,6 @@ const puppeteer = require('puppeteer');
 const moment = require('moment');
 const config = require('../config');
 const logger = require('../utils/logger');
-const NotificationService = require('./NotificationService');
 
 class AirMenusBooker {
   constructor() {
@@ -171,7 +170,11 @@ class AirMenusBooker {
           const dateInput = await this.page.$(selector);
           if (dateInput) {
             await dateInput.click();
-            await dateInput.fill(date);
+            await this.page.$eval(selector, (input, targetDate) => {
+              input.value = targetDate;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            }, date);
             await this.page.keyboard.press('Enter');
             dateSelected = true;
             break;
@@ -235,35 +238,58 @@ class AirMenusBooker {
       }
       
       if (!timeSelected) {
-        // Try finding closest available time
-        const availableTimes = await this.page.evaluate(() => {
-          const timeElements = document.querySelectorAll('.time-slot, .time-button, [data-time]');
-          return Array.from(timeElements).map(el => ({
-            time: el.getAttribute('data-time') || el.textContent.trim(),
-            element: el
-          }));
-        });
-        
-        // Find closest time
-        const targetTime = moment(time, 'HH:mm');
-        let closestTime = null;
-        let minDiff = Infinity;
-        
-        for (const timeOption of availableTimes) {
-          const optionTime = moment(timeOption.time, 'HH:mm');
-          const diff = Math.abs(targetTime.diff(optionTime, 'minutes'));
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestTime = timeOption;
+        const selectedTime = await this.page.evaluate((requestedTime) => {
+          const toMinutes = (value) => {
+            const match = String(value || '').match(/(\d{1,2}):?(\d{2})/);
+            if (!match) {
+              return null;
+            }
+
+            const hours = Number(match[1]);
+            const minutes = Number(match[2]);
+            if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+              return null;
+            }
+
+            return (hours * 60) + minutes;
+          };
+
+          const targetMinutes = toMinutes(requestedTime);
+          if (targetMinutes === null) {
+            return null;
           }
-        }
-        
-        if (closestTime) {
-          await this.page.evaluate((element) => element.click(), closestTime.element);
+
+          const timeElements = Array.from(document.querySelectorAll('.time-slot, .time-button, [data-time]'));
+          let closest = null;
+          let minDiff = Infinity;
+
+          for (const element of timeElements) {
+            const optionText = element.getAttribute('data-time') || element.textContent.trim();
+            const optionMinutes = toMinutes(optionText);
+            if (optionMinutes === null) {
+              continue;
+            }
+
+            const diff = Math.abs(targetMinutes - optionMinutes);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closest = { element, time: optionText };
+            }
+          }
+
+          if (!closest) {
+            return null;
+          }
+
+          closest.element.click();
+          return closest.time;
+        }, time);
+
+        if (selectedTime) {
           timeSelected = true;
           logger.info('Selected closest available time', { 
             requested: time, 
-            selected: closestTime.time 
+            selected: selectedTime
           });
         }
       }

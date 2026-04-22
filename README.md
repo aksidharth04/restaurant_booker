@@ -101,11 +101,17 @@ npm run book -- history --status confirmed
 Comal helper scripts:
 
 ```bash
+COMAL_BOOKING_NAME="Your Name" \
+COMAL_BOOKING_EMAIL="your-booking-email@example.com" \
+COMAL_BOOKING_PHONE="your-phone-number" \
 node book_comal_manual.js
+
 node book_comal_simple.js
 node book_comal_final.js
 node book_comal_robust.js
 ```
+
+The Comal scripts read contact details from `COMAL_BOOKING_NAME`, `COMAL_BOOKING_EMAIL`, and `COMAL_BOOKING_PHONE`; they do not store personal booking details in source.
 
 ## Project Structure
 

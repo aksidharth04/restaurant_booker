@@ -8,11 +8,12 @@
     "book": "node src/booker.js",
     "book-interactive": "node src/interactive.js",
     "book-batch": "node src/batch-booker.js",
+    "rush": "node src/rush-booker.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/booker.js"
   },
   "keywords": [
     "restaurant",
@@ -25,19 +26,17 @@
   "author": "Aksidharth M",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.6.0",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.3.1",
     "inquirer": "^8.2.7",
     "moment": "^2.29.4",
-    "node-cron": "^3.0.3",
     "node-notifier": "^10.0.1",
-    "nodemailer": "^6.9.7",
+    "nodemailer": "^8.0.5",
     "ora": "^7.0.1",
-    "puppeteer": "^21.5.2",
-    "sqlite3": "^5.1.6",
+    "puppeteer": "^24.42.0",
+    "sqlite3": "^6.0.1",
     "uuid": "^9.0.1",
     "winston": "^3.11.0"
   },

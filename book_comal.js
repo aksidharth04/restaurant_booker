@@ -6,6 +6,7 @@ const ora = require('ora');
 const config = require('./src/config');
 const AirMenusBooker = require('./src/services/AirMenusBooker');
 const BookingModel = require('./src/models/Booking');
+const { requireComalBookingDetails } = require('./src/utils/comalBookingDetails');
 
 async function bookComal({ date, time, guests, name, email, phone }) {
   const spinner = ora('Initializing booking system...').start();
@@ -87,17 +88,15 @@ async function main() {
   console.log(chalk.cyan('🍽️  Comal Restaurant Booking'));
   console.log(chalk.gray('Automated booking for Comal via AirMenus\n'));
 
-  // Get next Friday and Saturday
+  // Get next Friday
   const nextFriday = moment().day(5).format('YYYY-MM-DD');
-  const nextSaturday = moment().day(6).format('YYYY-MM-DD');
+  const contactDetails = requireComalBookingDetails();
 
   const bookingDetails = {
-    date: nextFriday, // Change to nextSaturday for Saturday booking
+    date: nextFriday,
     time: '19:30',    // Change to '13:00' for lunch
     guests: 2,
-    name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-    email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-    phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+    ...contactDetails
   };
 
   console.log(chalk.yellow('📅 Booking Details:'));

@@ -2,6 +2,7 @@
 
 const puppeteer = require('puppeteer');
 const chalk = require('chalk');
+const { requireComalBookingDetails } = require('./src/utils/comalBookingDetails');
 
 async function bookComal({ date, time, guests, name, email, phone }) {
   console.log(chalk.cyan('🚀 Starting Comal booking automation...'));
@@ -220,9 +221,7 @@ async function main() {
     date: date,
     time: '19:30', // 7:30 PM for dinner
     guests: 2,
-    name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-    email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-    phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+    ...requireComalBookingDetails()
   };
 
   console.log(chalk.yellow('📅 Booking Details:'));

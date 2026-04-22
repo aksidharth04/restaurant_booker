@@ -3,6 +3,7 @@
 const puppeteer = require('puppeteer');
 const chalk = require('chalk');
 const ora = require('ora');
+const { requireComalBookingDetails } = require('./src/utils/comalBookingDetails');
 
 async function bookComalSimple({ date, time, guests, name, email, phone }) {
   const spinner = ora('Starting Comal booking...').start();
@@ -27,13 +28,12 @@ async function bookComalSimple({ date, time, guests, name, email, phone }) {
     
     // Step 2: Click the "Book" button
     // Wait for and click the book button
-    await page.waitForSelector('button:contains("Book"), .book-button, [data-testid="book"], .btn-book', { 
+    await page.waitForSelector('button, .book-button, [data-testid="book"], .btn-book', {
       timeout: 10000 
     });
     
     // Try different selectors for the book button
     const bookSelectors = [
-      'button:contains("Book")',
       '.book-button',
       '[data-testid="book"]',
       '.btn-book',
@@ -213,9 +213,7 @@ async function main() {
     date: date,
     time: '19:30', // 7:30 PM for dinner
     guests: 2,
-    name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-    email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-    phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+    ...requireComalBookingDetails()
   };
 
   console.log(chalk.yellow('📅 Booking Details:'));

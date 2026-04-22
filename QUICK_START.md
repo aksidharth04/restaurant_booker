@@ -98,6 +98,9 @@ AIRMENUS_EMAIL=your-email@example.com
 AIRMENUS_PASSWORD=your-password
 ENCRYPTION_KEY=your-32-character-key
 ENABLE_EMAIL_NOTIFICATIONS=true
+COMAL_BOOKING_NAME=Your Name
+COMAL_BOOKING_EMAIL=your-booking-email@example.com
+COMAL_BOOKING_PHONE=your-phone-number
 ```
 
 ### Booking Preferences (config.json)

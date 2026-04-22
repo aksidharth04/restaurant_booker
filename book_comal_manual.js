@@ -2,10 +2,16 @@
 
 const puppeteer = require('puppeteer');
 const chalk = require('chalk');
+const {
+  CONTACT_ENV,
+  displayContactValue,
+  getComalBookingDetails
+} = require('./src/utils/comalBookingDetails');
 
 async function openComalBooking() {
   console.log(chalk.cyan('🍽️  Opening Comal Restaurant Booking'));
   console.log(chalk.gray('Manual booking assistance\n'));
+  const contactDetails = getComalBookingDetails();
   
   let browser;
   
@@ -29,9 +35,9 @@ async function openComalBooking() {
     console.log(chalk.cyan('\n📋 Your Booking Details:'));
     console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
     console.log(chalk.white(`📍 Restaurant: ${chalk.bold('Comal')}`));
-    console.log(chalk.white(`👤 Name: ${chalk.bold('Your Name')}`));
-    console.log(chalk.white(`📧 Email: ${chalk.bold('your-booking-email@example.com')}`));
-    console.log(chalk.white(`📱 Phone: ${chalk.bold('your-phone-number')}`));
+    console.log(chalk.white(`👤 Name: ${chalk.bold(displayContactValue(contactDetails.name, CONTACT_ENV.name))}`));
+    console.log(chalk.white(`📧 Email: ${chalk.bold(displayContactValue(contactDetails.email, CONTACT_ENV.email))}`));
+    console.log(chalk.white(`📱 Phone: ${chalk.bold(displayContactValue(contactDetails.phone, CONTACT_ENV.phone))}`));
     console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
     
     console.log(chalk.yellow('\n📝 Manual Steps:'));
@@ -40,9 +46,9 @@ async function openComalBooking() {
     console.log(chalk.white('3. Choose number of guests (2)'));
     console.log(chalk.white('4. Click "Next" or "Continue"'));
     console.log(chalk.white('5. Fill in your details:'));
-    console.log(chalk.gray('   • Name: Your Name'));
-    console.log(chalk.gray('   • Email: your-booking-email@example.com'));
-    console.log(chalk.gray('   • Phone: your-phone-number'));
+    console.log(chalk.gray(`   • Name: ${displayContactValue(contactDetails.name, CONTACT_ENV.name)}`));
+    console.log(chalk.gray(`   • Email: ${displayContactValue(contactDetails.email, CONTACT_ENV.email)}`));
+    console.log(chalk.gray(`   • Phone: ${displayContactValue(contactDetails.phone, CONTACT_ENV.phone)}`));
     console.log(chalk.white('6. Check the policy checkbox'));
     console.log(chalk.white('7. Click "PROCEED" to complete payment'));
     
