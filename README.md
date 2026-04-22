@@ -113,6 +113,25 @@ node book_comal_robust.js
 
 The Comal scripts read contact details from `COMAL_BOOKING_NAME`, `COMAL_BOOKING_EMAIL`, and `COMAL_BOOKING_PHONE`; they do not store personal booking details in source.
 
+AirMenus rush mode for Guerilla Diner or Naru:
+
+```bash
+npm run rush -- \
+  --venue guerilla \
+  --date 2026-04-24 \
+  --time 17:00 \
+  --guests 1 \
+  --release-at "2026-04-22 20:00 Asia/Kolkata" \
+  --profile sidharth \
+  --headed \
+  --timeout-ms 12000 \
+  --poll-ms 500 \
+  --handoff-timeout-ms 45000 \
+  --timing
+```
+
+Store rush-mode contact details in `.booking-profiles.local.json` or `BOOKING_NAME`, `BOOKING_EMAIL`, and `BOOKING_PHONE`; do not pass personal details on the command line. In a live Guerilla Diner run for the 2026-04-24 17:00 slot, this command reached the payment/UPI handoff in 3,877 ms.
+
 ## Project Structure
 
 ```text
