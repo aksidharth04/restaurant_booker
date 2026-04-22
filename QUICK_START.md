@@ -60,6 +60,8 @@ This system automatically books tables at restaurants using AirMenus integration
 
 ## 🛠️ Usage Examples
 
+Rush mode help: `npm run rush -- --help`
+
 ### Single Booking
 ```bash
 npm run book -- book --restaurant "The Grand Restaurant" --date "2026-04-23" --time "19:30" --guests 4
