@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "sidharth": {
+      "name": "Your Booking Name",
+      "email": "your-booking-email@example.com",
+      "phone": "your-phone-number"
+    },
+    "rush": {
+      "name": "Backup Booking Name",
+      "email": "backup-booking-email@example.com",
+      "phone": "backup-phone-number"
+    }
+  }
+}

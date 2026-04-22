@@ -115,6 +115,14 @@ The Comal scripts read contact details from `COMAL_BOOKING_NAME`, `COMAL_BOOKING
 
 AirMenus rush mode for Guerilla Diner or Naru:
 
+Create a local-only contact profile first:
+
+```bash
+cp .booking-profiles.local.example.json .booking-profiles.local.json
+```
+
+Edit `.booking-profiles.local.json` with the contact details AirMenus should use. The local file is gitignored; only the placeholder example is committed.
+
 ```bash
 npm run rush -- \
   --venue guerilla \
