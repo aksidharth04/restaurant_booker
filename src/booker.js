@@ -11,9 +11,12 @@ const AirMenusBooker = require('./services/AirMenusBooker');
 const NotificationService = require('./services/NotificationService');
 
 class RestaurantBooker {
-  constructor() {
-    this.booker = new AirMenusBooker();
-    this.setupCLI();
+  constructor(options = {}) {
+    this.booker = options.booker || new AirMenusBooker();
+
+    if (options.autoParse !== false) {
+      this.setupCLI();
+    }
   }
 
   setupCLI() {
@@ -81,7 +84,7 @@ class RestaurantBooker {
         restaurantUrl: options.url,
         date: options.date,
         time: options.time,
-        guests: parseInt(options.guests)
+        guests: this.parseGuestCount(options.guests)
       };
 
       // Validate booking data
@@ -142,7 +145,9 @@ class RestaurantBooker {
       throw new Error('Invalid time format. Use HH:MM');
     }
 
-    if (guests < 1 || guests > config.getBookingConfig().maxGuests) {
+    bookingData.guests = this.parseGuestCount(guests);
+
+    if (bookingData.guests < 1 || bookingData.guests > config.getBookingConfig().maxGuests) {
       throw new Error(`Number of guests must be between 1 and ${config.getBookingConfig().maxGuests}`);
     }
 
@@ -157,6 +162,25 @@ class RestaurantBooker {
     if (bookingDate.isAfter(maxBookingDate)) {
       throw new Error(`Cannot book more than ${config.getBookingConfig().bookingWindowDays} days in advance`);
     }
+  }
+
+  parseGuestCount(value) {
+    const maxGuests = config.getBookingConfig().maxGuests;
+    let guests;
+
+    if (typeof value === 'number') {
+      guests = value;
+    } else if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+      guests = Number(value.trim());
+    } else {
+      throw new Error(`Number of guests must be a whole number between 1 and ${maxGuests}`);
+    }
+
+    if (!Number.isSafeInteger(guests) || guests < 1 || guests > maxGuests) {
+      throw new Error(`Number of guests must be a whole number between 1 and ${maxGuests}`);
+    }
+
+    return guests;
   }
 
   async attemptBooking(bookingData, retryEnabled, spinner) {
@@ -257,7 +281,7 @@ class RestaurantBooker {
       name: options.add,
       url: options.url,
       preferredTime: options.time,
-      preferredGuests: parseInt(options.guests)
+      preferredGuests: this.parseGuestCount(options.guests)
     };
 
     await BookingModel.addFavorite(favoriteData);
@@ -310,5 +334,8 @@ class RestaurantBooker {
   }
 }
 
-// Initialize and run the application
-const booker = new RestaurantBooker();
+if (require.main === module) {
+  new RestaurantBooker();
+}
+
+module.exports = RestaurantBooker;

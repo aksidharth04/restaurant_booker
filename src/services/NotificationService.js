@@ -3,6 +3,8 @@ const notifier = require('node-notifier');
 const config = require('../config');
 const logger = require('../utils/logger');
 const path = require('path'); // Added missing import for path
+const { escapeHtml } = require('../utils/htmlEscape');
+const { redactSensitive } = require('../utils/redaction');
 
 class NotificationService {
   constructor() {
@@ -40,7 +42,7 @@ class NotificationService {
     }
 
     try {
-      const { restaurantName, date, time, guests, status, confirmationNumber } = bookingData;
+      const { restaurantName, status } = bookingData;
       
       const subject = status === 'confirmed' 
         ? `✅ Booking Confirmed: ${restaurantName}`
@@ -65,7 +67,7 @@ class NotificationService {
     } catch (error) {
       logger.error('Failed to send email notification', { 
         error: error.message,
-        bookingData 
+        bookingData: redactSensitive(bookingData)
       });
       return false;
     }
@@ -73,6 +75,12 @@ class NotificationService {
 
   generateEmailTemplate(bookingData) {
     const { restaurantName, date, time, guests, status, confirmationNumber } = bookingData;
+    const safeRestaurantName = escapeHtml(restaurantName);
+    const safeDate = escapeHtml(date);
+    const safeTime = escapeHtml(time);
+    const safeGuests = escapeHtml(guests);
+    const safeConfirmationNumber = escapeHtml(confirmationNumber);
+    const generatedAt = escapeHtml(new Date().toLocaleString());
     
     const statusColor = status === 'confirmed' ? '#28a745' : '#dc3545';
     const statusIcon = status === 'confirmed' ? '✅' : '❌';
@@ -104,31 +112,31 @@ class NotificationService {
           <div class="details">
             <div class="detail-row">
               <span class="label">Restaurant:</span>
-              <span class="value">${restaurantName}</span>
+              <span class="value">${safeRestaurantName}</span>
             </div>
             <div class="detail-row">
               <span class="label">Date:</span>
-              <span class="value">${date}</span>
+              <span class="value">${safeDate}</span>
             </div>
             <div class="detail-row">
               <span class="label">Time:</span>
-              <span class="value">${time}</span>
+              <span class="value">${safeTime}</span>
             </div>
             <div class="detail-row">
               <span class="label">Guests:</span>
-              <span class="value">${guests}</span>
+              <span class="value">${safeGuests}</span>
             </div>
             ${confirmationNumber ? `
             <div class="detail-row">
               <span class="label">Confirmation #:</span>
-              <span class="value">${confirmationNumber}</span>
+              <span class="value">${safeConfirmationNumber}</span>
             </div>
             ` : ''}
           </div>
           
           <div class="footer">
             <p>This notification was sent by Restaurant Booker</p>
-            <p>Generated on ${new Date().toLocaleString()}</p>
+            <p>Generated on ${generatedAt}</p>
           </div>
         </div>
       </body>
@@ -165,7 +173,7 @@ class NotificationService {
     } catch (error) {
       logger.error('Failed to send desktop notification', { 
         error: error.message,
-        bookingData 
+        bookingData: redactSensitive(bookingData)
       });
       return false;
     }
@@ -226,6 +234,12 @@ class NotificationService {
 
     try {
       const { restaurantName, date, time, guests } = bookingData;
+      const safeRestaurantName = escapeHtml(restaurantName);
+      const safeDate = escapeHtml(date);
+      const safeTime = escapeHtml(time);
+      const safeGuests = escapeHtml(guests);
+      const safeAttempt = escapeHtml(attempt);
+      const safeMaxAttempts = escapeHtml(maxAttempts);
       
       const subject = `🔄 Retrying Booking: ${restaurantName}`;
       const html = `
@@ -242,11 +256,11 @@ class NotificationService {
           <div class="container">
             <div class="warning">
               <h2>🔄 Retrying Booking</h2>
-              <p><strong>Restaurant:</strong> ${restaurantName}</p>
-              <p><strong>Date:</strong> ${date}</p>
-              <p><strong>Time:</strong> ${time}</p>
-              <p><strong>Guests:</strong> ${guests}</p>
-              <p><strong>Attempt:</strong> ${attempt} of ${maxAttempts}</p>
+              <p><strong>Restaurant:</strong> ${safeRestaurantName}</p>
+              <p><strong>Date:</strong> ${safeDate}</p>
+              <p><strong>Time:</strong> ${safeTime}</p>
+              <p><strong>Guests:</strong> ${safeGuests}</p>
+              <p><strong>Attempt:</strong> ${safeAttempt} of ${safeMaxAttempts}</p>
               <p>We're retrying your booking. You'll receive another notification once complete.</p>
             </div>
           </div>
@@ -265,7 +279,7 @@ class NotificationService {
       logger.info('Retry notification sent', { attempt, maxAttempts, restaurantName });
       return true;
     } catch (error) {
-      logger.error('Failed to send retry notification', { error: error.message });
+      logger.error('Failed to send retry notification', { error: error.message, bookingData: redactSensitive(bookingData) });
       return false;
     }
   }

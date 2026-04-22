@@ -102,6 +102,8 @@ AIRMENUS_EMAIL=your-email@example.com
 AIRMENUS_PASSWORD=your-password
 ENCRYPTION_KEY=your-32-character-key
 ENABLE_EMAIL_NOTIFICATIONS=true
+
+# Optional Comal helper contact details; keep these in .env, not inline commands.
 COMAL_BOOKING_NAME=Your Name
 COMAL_BOOKING_EMAIL=your-booking-email@example.com
 COMAL_BOOKING_PHONE=your-phone-number
@@ -128,7 +130,7 @@ COMAL_BOOKING_PHONE=your-phone-number
 
 2. **Rate Limiting**: The system includes delays between requests to avoid overwhelming servers.
 
-3. **Credentials Security**: Your AirMenus credentials are encrypted and stored locally.
+3. **Credentials Security**: Your AirMenus credentials stay in the local `.env` file, and setup tightens private file permissions where possible. Booking metadata stored in the database uses `ENCRYPTION_KEY`.
 
 4. **Browser Automation**: Uses Puppeteer for web automation. Runs headless by default.
 
@@ -152,12 +154,12 @@ LOG_LEVEL=debug npm run book-interactive
 - **Success Rate**: 85-95% with retry logic
 - **Memory Usage**: ~100MB per browser instance
 
-## 🔒 Security Features
+## 🔒 Security Notes
 
-- Encrypted credential storage
-- Secure database with SQLite
-- No external data transmission
-- Local-only operation
+- Local `.env`, profile, data, and log files are permission-tightened where possible.
+- SQLite booking history is local to this machine.
+- Optional email notifications transmit booking details through your configured SMTP provider.
+- Avoid putting personal booking contact details directly in command lines.
 
 ## 📈 Advanced Features
 

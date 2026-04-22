@@ -16,9 +16,10 @@ async function pollForAvailability({
   random = Math.random
 }) {
   const startedAt = now();
-  const deadline = startedAt + timeoutMs;
   const releaseMs = releaseAt ? new Date(releaseAt).getTime() : startedAt;
   const tightWindowStart = releaseMs - tightPollWindowMs;
+  const deadlineStart = Math.max(startedAt, tightWindowStart);
+  const deadline = deadlineStart + timeoutMs;
   let attempts = 0;
   let transientFailures = 0;
 

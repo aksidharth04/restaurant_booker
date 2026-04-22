@@ -34,8 +34,6 @@ class AirMenusRushBooker {
       headless: this.browserConfig.headless,
       defaultViewport: this.browserConfig.viewport,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu'
       ]
@@ -86,49 +84,74 @@ class AirMenusRushBooker {
 
       await prewarmPromise;
 
-      const availability = await this.pollForAvailability({
+      const pollingDeadline = getPollingDeadline({
+        now: this.now,
         releaseAt,
-        timeoutMs,
-        pollMs,
-        minPollMs,
         tightPollWindowMs,
-        check: () => this.apiClient.getSlotRemainingPax({
-          groupTitle: slot.groupTitle,
-          bookingDt: slot.bookingDt,
-          outletId: outlet.id
-        }),
-        isAvailable: response => getRemainingPax(response, time) >= guests
+        timeoutMs
       });
-      timings.mark('availability_confirmed');
+      let availability = null;
+      let lastBrowserError = null;
+      let checkoutReady = false;
 
-      if (!availability.available) {
+      while (this.now() < pollingDeadline) {
+        availability = await this.pollForAvailability({
+          releaseAt,
+          timeoutMs: Math.max(0, pollingDeadline - this.now()),
+          pollMs,
+          minPollMs,
+          tightPollWindowMs,
+          check: () => this.apiClient.getSlotRemainingPax({
+            groupTitle: slot.groupTitle,
+            bookingDt: slot.bookingDt,
+            outletId: outlet.id
+          }),
+          isAvailable: response => getRemainingPax(response, time) >= guests
+        });
+        timings.mark('availability_confirmed');
+
+        if (!availability.available) {
+          return {
+            status: lastBrowserError ? 'browser-retry-timeout' : 'sold-out-timeout',
+            outlet,
+            slot,
+            availability,
+            lastBrowserError: lastBrowserError?.message,
+            timings: timings.finish()
+          };
+        }
+
+        try {
+          await this.prepareCheckout({ venue, date, time, guests, slot, releaseAt, timings });
+          if (dryRun) {
+            return {
+              status: 'dry-run-ready',
+              outlet,
+              slot,
+              availability,
+              timings: timings.finish()
+            };
+          }
+          checkoutReady = true;
+          break;
+        } catch (error) {
+          if (!isRecoverableBrowserError(error)) {
+            throw error;
+          }
+
+          lastBrowserError = error;
+          timings.mark('browser_retry_after_recoverable_error');
+          await this.refreshAfterAvailability(venue);
+        }
+      }
+
+      if (!checkoutReady) {
         return {
-          status: 'sold-out-timeout',
+          status: lastBrowserError ? 'browser-retry-timeout' : 'sold-out-timeout',
           outlet,
           slot,
           availability,
-          timings: timings.finish()
-        };
-      }
-
-      if (this.shouldRefreshAfterAvailability(releaseAt)) {
-        await this.refreshAfterAvailability(venue);
-        timings.mark('browser_refreshed');
-      } else {
-        timings.mark('browser_fresh_after_release');
-      }
-
-      await this.ensureBrowserSlotState({ venue, date, slot, timings });
-      timings.mark('browser_state_verified');
-      await this.driveToCheckout({ date, time, guests, slot });
-      timings.mark('checkout_reached');
-
-      if (dryRun) {
-        return {
-          status: 'dry-run-ready',
-          outlet,
-          slot,
-          availability,
+          lastBrowserError: lastBrowserError?.message,
           timings: timings.finish()
         };
       }
@@ -155,6 +178,20 @@ class AirMenusRushBooker {
       await prewarmPromise.catch(() => undefined);
       throw error;
     }
+  }
+
+  async prepareCheckout({ venue, date, time, guests, slot, releaseAt, timings }) {
+    if (this.shouldRefreshAfterAvailability(releaseAt)) {
+      await this.refreshAfterAvailability(venue);
+      timings.mark('browser_refreshed');
+    } else {
+      timings.mark('browser_fresh_after_release');
+    }
+
+    await this.ensureBrowserSlotState({ venue, date, slot, timings });
+    timings.mark('browser_state_verified');
+    await this.driveToCheckout({ date, time, guests, slot });
+    timings.mark('checkout_reached');
   }
 
   async startPrewarm({ venue, releaseAt, prewarmMs, timings }) {
@@ -293,10 +330,12 @@ class AirMenusRushBooker {
   async clickGroupBook(groupTitle) {
     await this.page.evaluate(targetGroupTitle => {
       const cards = Array.from(document.querySelectorAll('div, section, article'));
-      const card = cards.find(element => {
-        const text = (element.innerText || '').toLowerCase();
-        return text.includes(String(targetGroupTitle).toLowerCase()) && text.includes('book');
-      });
+      const card = cards
+        .filter(element => {
+          const text = (element.innerText || '').toLowerCase();
+          return text.includes(String(targetGroupTitle).toLowerCase()) && text.includes('book');
+        })
+        .sort((left, right) => (left.innerText || '').length - (right.innerText || '').length)[0];
       const button = card && Array.from(card.querySelectorAll('button, [role="button"]'))
         .find(element => (element.innerText || element.textContent || '').trim().toLowerCase() === 'book');
 
@@ -495,7 +534,7 @@ class AirMenusRushBooker {
       }
     }
 
-    throw new Error(`Checkout input not found for value: ${value}`);
+    throw new Error(`Checkout input not found for selectors: ${selectors.join(', ')}`);
   }
 
   async clickProceed() {
@@ -631,11 +670,23 @@ class AirMenusRushBooker {
 
 function getRemainingPax(response, time) {
   const value = response?.[time] ?? response?.total_pax_left ?? response?.pax ?? 0;
-  if (typeof value === 'number') {
-    return value;
+  if (typeof value === 'number' || typeof value === 'string') {
+    return Number(value);
   }
 
   return Number(value.total_pax_left ?? value.pax ?? value.remaining ?? 0);
+}
+
+function getPollingDeadline({ now, releaseAt, tightPollWindowMs, timeoutMs }) {
+  const startedAt = now();
+  const releaseMs = releaseAt ? new Date(releaseAt).getTime() : startedAt;
+  const tightWindowStart = releaseMs - tightPollWindowMs;
+  return Math.max(startedAt, tightWindowStart) + timeoutMs;
+}
+
+function isRecoverableBrowserError(error) {
+  return /browser page did not refresh|date button not found|book button not found|time option not found|timed out waiting for airmenus route|guest increment button not found|button not found|sold out|unavailable|checking slot availability/i
+    .test(error.message || '');
 }
 
 function getTimeLabels(time) {

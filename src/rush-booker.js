@@ -68,7 +68,7 @@ async function runRush(options, { runnerFactory = runnerOptions => new AirMenusR
 }
 
 function buildRunnerOptions(options) {
-  if (!options.headed) {
+  if (!options.headed && options.dryRun) {
     return {};
   }
 

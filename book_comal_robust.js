@@ -3,6 +3,7 @@
 const puppeteer = require('puppeteer');
 const chalk = require('chalk');
 const { requireComalBookingDetails } = require('./src/utils/comalBookingDetails');
+const { REDACTED } = require('./src/utils/redaction');
 
 async function bookComal({ date, time, guests, name, email, phone }) {
   console.log(chalk.cyan('🚀 Starting Comal booking automation...'));
@@ -15,14 +16,11 @@ async function bookComal({ date, time, guests, name, email, phone }) {
       headless: false,
       defaultViewport: { width: 1280, height: 720 },
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu',
-        '--disable-web-security',
         '--disable-features=VizDisplayCompositor'
       ]
     });
@@ -224,9 +222,9 @@ async function bookComal({ date, time, guests, name, email, phone }) {
     console.log(chalk.white(`📅 Date: ${chalk.bold(date)}`));
     console.log(chalk.white(`🕐 Time: ${chalk.bold(time)}`));
     console.log(chalk.white(`👥 Guests: ${chalk.bold(guests)}`));
-    console.log(chalk.white(`👤 Name: ${chalk.bold(name)}`));
-    console.log(chalk.white(`📧 Email: ${chalk.bold(email)}`));
-    console.log(chalk.white(`📱 Phone: ${chalk.bold(phone)}`));
+    console.log(chalk.white(`👤 Name: ${chalk.bold(REDACTED)}`));
+    console.log(chalk.white(`📧 Email: ${chalk.bold(REDACTED)}`));
+    console.log(chalk.white(`📱 Phone: ${chalk.bold(REDACTED)}`));
     console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
     console.log(chalk.yellow('\n💳 Please click the "PROCEED" button to complete payment'));
     console.log(chalk.gray('The browser will stay open for you to handle the payment'));
@@ -268,7 +266,7 @@ async function main() {
   console.log(chalk.white(`Date: ${bookingDetails.date} (${nextFriday.toLocaleDateString('en-US', { weekday: 'long' })})`));
   console.log(chalk.white(`Time: ${bookingDetails.time}`));
   console.log(chalk.white(`Guests: ${bookingDetails.guests}`));
-  console.log(chalk.white(`Name: ${bookingDetails.name}`));
+  console.log(chalk.white(`Contact: ${REDACTED}`));
   console.log('');
 
   const result = await bookComal(bookingDetails);

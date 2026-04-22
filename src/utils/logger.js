@@ -1,17 +1,35 @@
 const winston = require('winston');
 const path = require('path');
-const fs = require('fs');
 const config = require('../config');
+const { ensurePrivateDirectory, ensurePrivateFile } = require('./privateArtifacts');
+const { redactSensitive, redactText } = require('./redaction');
 
 // Ensure logs directory exists
 const logsDir = path.dirname(config.getLoggingConfig().file);
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+if (logsDir && logsDir !== '.') {
+  ensurePrivateDirectory(logsDir);
 }
+ensurePrivateFile(config.getLoggingConfig().file);
+ensurePrivateFile(path.join(logsDir, 'error.log'));
+
+const redactFormat = winston.format((info) => {
+  if (typeof info.message === 'string') {
+    info.message = redactText(info.message);
+  }
+
+  Object.keys(info).forEach((key) => {
+    if (!['level', 'message', 'timestamp'].includes(key)) {
+      info[key] = redactSensitive(info[key], key);
+    }
+  });
+
+  return info;
+});
 
 // Custom format for console output
 const consoleFormat = winston.format.combine(
   winston.format.colorize(),
+  redactFormat(),
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
     let msg = `${timestamp} [${level}]: ${message}`;
@@ -24,8 +42,9 @@ const consoleFormat = winston.format.combine(
 
 // Custom format for file output
 const fileFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
+  redactFormat(),
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.json()
 );
 

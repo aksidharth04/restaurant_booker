@@ -2,7 +2,7 @@
 
 Automated restaurant table booking utilities for AirMenus-powered booking pages.
 
-This is a Node.js CLI project. It uses Puppeteer for browser automation, SQLite for local booking history, local encrypted configuration for sensitive values, and optional email or desktop notifications after booking attempts.
+This is a Node.js CLI project. It uses Puppeteer for browser automation, SQLite for local booking history, local config files for credentials/settings, encrypted storage for optional booking metadata, and optional email or desktop notifications after booking attempts.
 
 ## Features
 
@@ -47,6 +47,8 @@ ENABLE_EMAIL_NOTIFICATIONS=true
 ```
 
 Review `config.json` for booking defaults, retry behavior, browser settings, and favorite restaurants.
+
+`setup.js` creates local private directories and tightens `.env`, `config.json`, log files, and local booking profile files where possible. Keep these files out of commits and avoid sharing terminal output that includes booking details.
 
 ## Usage
 
@@ -101,17 +103,13 @@ npm run book -- history --status confirmed
 Comal helper scripts:
 
 ```bash
-COMAL_BOOKING_NAME="Your Name" \
-COMAL_BOOKING_EMAIL="your-booking-email@example.com" \
-COMAL_BOOKING_PHONE="your-phone-number" \
 node book_comal_manual.js
-
 node book_comal_simple.js
 node book_comal_final.js
 node book_comal_robust.js
 ```
 
-The Comal scripts read contact details from `COMAL_BOOKING_NAME`, `COMAL_BOOKING_EMAIL`, and `COMAL_BOOKING_PHONE`; they do not store personal booking details in source.
+The Comal scripts read contact details from `COMAL_BOOKING_NAME`, `COMAL_BOOKING_EMAIL`, and `COMAL_BOOKING_PHONE`; they do not store personal booking details in source. Put those values in your local `.env` file or export them in the current shell before running the scripts. Avoid prefixing commands with personal contact values, because shell history and process listings can expose them.
 
 AirMenus rush mode for Guerilla Diner or Naru:
 
@@ -240,7 +238,8 @@ npm run lint
 
 - Do not commit `.env`.
 - Use a unique `ENCRYPTION_KEY` with at least 32 characters.
-- Booking history is stored locally in SQLite.
+- Booking history is stored locally in SQLite; the app tightens `data/`, `logs/`, and current DB/log file permissions where possible.
+- Email notifications send booking details through your configured SMTP provider. Disable email notifications if you need a local-only run.
 - Respect restaurant and AirMenus terms when using browser automation.
 
 ## Repository

@@ -11,6 +11,31 @@ const BookingModel = require('./models/Booking');
 const AirMenusBooker = require('./services/AirMenusBooker');
 const NotificationService = require('./services/NotificationService');
 
+let sharedRedaction = {};
+let sharedPrivateArtifacts = {};
+
+try {
+  sharedRedaction = require('./utils/redaction');
+} catch {
+  sharedRedaction = {};
+}
+
+try {
+  sharedPrivateArtifacts = require('./utils/privateArtifacts');
+} catch {
+  sharedPrivateArtifacts = {};
+}
+
+const REDACTED = sharedRedaction.REDACTED || '[REDACTED]';
+const redactSharedText = sharedRedaction.redactText || (value => value);
+const writePrivateFile = sharedPrivateArtifacts.writePrivateFile || ((filePath, contents) => {
+  const directory = path.dirname(filePath);
+
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(filePath, contents, { mode: 0o600 });
+  fs.chmodSync(filePath, 0o600);
+});
+
 class BatchBooker {
   constructor(options = {}) {
     this.config = options.config || config;
@@ -18,6 +43,7 @@ class BatchBooker {
     this.notificationService = options.notificationService || NotificationService;
     this.bookerFactory = options.bookerFactory || (() => new AirMenusBooker());
     this.spinnerFactory = options.spinnerFactory || ((text) => require('ora')(text).start());
+    this.privateOutputDir = options.privateOutputDir || path.join(process.cwd(), 'data', 'private');
 
     if (options.autoParse !== false) {
       this.setupCLI();
@@ -47,7 +73,7 @@ class BatchBooker {
     program
       .command('generate-template')
       .description('Generate a template JSON file for batch booking')
-      .option('-o, --output <path>', 'Output file path', 'bookings-template.json')
+      .option('-o, --output <path>', 'Output file path', this.getDefaultTemplatePath())
       .action(async (options) => {
         await this.generateTemplate(options);
       });
@@ -68,11 +94,11 @@ class BatchBooker {
       spinner.text = `Loaded ${bookings.length} bookings`;
 
       // Validate all bookings
-      this.validateBookings(bookings);
+      const validatedBookings = this.validateBookings(bookings);
       spinner.text = 'All bookings validated';
 
       // Process bookings
-      const results = await this.processBookings(bookings, options, spinner);
+      const results = await this.processBookings(validatedBookings, options, spinner);
 
       // Display results
       this.displayResults(results);
@@ -109,10 +135,11 @@ class BatchBooker {
 
   validateBookings(bookings) {
     const errors = [];
+    const validatedBookings = [];
 
     bookings.forEach((booking, index) => {
       try {
-        this.validateSingleBooking(booking);
+        validatedBookings.push(this.validateSingleBooking(booking));
       } catch (error) {
         errors.push(`Booking ${index + 1}: ${error.message}`);
       }
@@ -121,11 +148,13 @@ class BatchBooker {
     if (errors.length > 0) {
       throw new Error(`Validation errors:\n${errors.join('\n')}`);
     }
+
+    return validatedBookings;
   }
 
   validateSingleBooking(booking) {
     const required = ['restaurantName', 'date', 'time', 'guests'];
-    const missing = required.filter(field => !booking[field]);
+    const missing = required.filter(field => booking[field] === undefined || booking[field] === null || booking[field] === '');
     
     if (missing.length > 0) {
       throw new Error(`Missing required fields: ${missing.join(', ')}`);
@@ -139,7 +168,9 @@ class BatchBooker {
       throw new Error('Invalid time format. Use HH:MM');
     }
 
-    if (booking.guests < 1 || booking.guests > this.config.getBookingConfig().maxGuests) {
+    const guests = this.parseGuestCount(booking.guests);
+
+    if (guests < 1 || guests > this.config.getBookingConfig().maxGuests) {
       throw new Error(`Number of guests must be between 1 and ${this.config.getBookingConfig().maxGuests}`);
     }
 
@@ -154,6 +185,30 @@ class BatchBooker {
     if (bookingDate.isAfter(maxBookingDate)) {
       throw new Error(`Cannot book more than ${this.config.getBookingConfig().bookingWindowDays} days in advance`);
     }
+
+    return {
+      ...booking,
+      guests
+    };
+  }
+
+  parseGuestCount(value) {
+    const maxGuests = this.config.getBookingConfig().maxGuests;
+    let guests;
+
+    if (typeof value === 'number') {
+      guests = value;
+    } else if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+      guests = Number(value.trim());
+    } else {
+      throw new Error(`Number of guests must be a whole number between 1 and ${maxGuests}`);
+    }
+
+    if (!Number.isSafeInteger(guests) || guests < 1 || guests > maxGuests) {
+      throw new Error(`Number of guests must be a whole number between 1 and ${maxGuests}`);
+    }
+
+    return guests;
   }
 
   async processBookings(bookings, options, spinner) {
@@ -221,7 +276,12 @@ class BatchBooker {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           if (attempt > 1) {
-            logger.retryAttempt(attempt, maxAttempts, bookingData.restaurantName);
+            logger.warn('Retrying batch booking attempt', {
+              attempt,
+              maxAttempts,
+              booking: this.redactBookingDataForLog(bookingData),
+              timestamp: new Date().toISOString()
+            });
             const delay = retryConfig.delayMs * Math.pow(retryConfig.backoffMultiplier, attempt - 1);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
@@ -249,17 +309,21 @@ class BatchBooker {
         } catch (error) {
           lastError = error;
           logger.error(`Booking attempt ${attempt} failed`, { 
-            error: error.message,
+            error: this.redactTextForLog(error.message, bookingData),
             attempt,
             maxAttempts,
-            bookingData 
+            booking: this.redactBookingDataForLog(bookingData)
           });
         }
       }
 
       // All attempts failed
       await this.bookingModel.updateStatus(bookingRecord.id, 'failed');
-      logger.bookingFailed(bookingData.restaurantName, bookingData.date, bookingData.time, bookingData.guests, lastError);
+      logger.error('Batch booking failed after retries', {
+        error: this.redactTextForLog(lastError?.message, bookingData),
+        booking: this.redactBookingDataForLog(bookingData),
+        timestamp: new Date().toISOString()
+      });
       
       if (options.notifications !== false) {
         await this.notificationService.sendBookingFailure(bookingData, lastError);
@@ -275,6 +339,31 @@ class BatchBooker {
     } finally {
       await booker.close();
     }
+  }
+
+  redactBookingDataForLog(bookingData = {}) {
+    const redacted = {};
+
+    Object.keys(bookingData).forEach((key) => {
+      redacted[key] = REDACTED;
+    });
+
+    return redacted;
+  }
+
+  redactTextForLog(text, bookingData = {}) {
+    if (!text) {
+      return text;
+    }
+
+    return Object.values(bookingData).reduce((redactedText, value) => {
+      if (value === undefined || value === null || value === '') {
+        return redactedText;
+      }
+
+      const escapedValue = String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return redactedText.replace(new RegExp(escapedValue, 'g'), REDACTED);
+    }, redactSharedText(String(text)));
   }
 
   displayResults(results) {
@@ -309,7 +398,7 @@ class BatchBooker {
 
     // Save results to file
     const timestamp = moment().format('YYYY-MM-DD_HH-mm-ss');
-    const resultsFile = `batch-results-${timestamp}.json`;
+    const resultsFile = this.getPrivateOutputPath(`batch-results-${timestamp}.json`);
     
     const resultsData = {
       timestamp: new Date().toISOString(),
@@ -322,8 +411,10 @@ class BatchBooker {
       failed: results.failed
     };
 
-    fs.writeFileSync(resultsFile, JSON.stringify(resultsData, null, 2));
+    this.writeSensitiveJson(resultsFile, resultsData);
     console.log(chalk.gray(`\nResults saved to: ${resultsFile}`));
+
+    return resultsFile;
   }
 
   async generateTemplate(options) {
@@ -346,14 +437,30 @@ class BatchBooker {
     ];
 
     try {
-      fs.writeFileSync(options.output, JSON.stringify(template, null, 2));
-      console.log(chalk.green(`✅ Template generated: ${options.output}`));
+      const outputFile = options.output || this.getDefaultTemplatePath();
+      this.writeSensitiveJson(outputFile, template);
+      console.log(chalk.green(`✅ Template generated: ${outputFile}`));
       console.log(chalk.gray('\nEdit the file with your booking details and run:'));
-      console.log(chalk.cyan(`npm run book-batch -- book --file ${options.output}`));
+      console.log(chalk.cyan(`npm run book-batch -- book --file ${outputFile}`));
     } catch (error) {
       console.error(chalk.red(`Error generating template: ${error.message}`));
       process.exit(1);
     }
+  }
+
+  getDefaultTemplatePath() {
+    return this.getPrivateOutputPath('bookings-template.json');
+  }
+
+  getPrivateOutputPath(fileName) {
+    return path.join(this.privateOutputDir, fileName);
+  }
+
+  writeSensitiveJson(filePath, data) {
+    const fullPath = path.resolve(filePath);
+    writePrivateFile(fullPath, JSON.stringify(data, null, 2));
+
+    return fullPath;
   }
 }
 

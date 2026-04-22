@@ -2,6 +2,13 @@
 
 const fs = require('fs');
 const path = require('path');
+const {
+  PRIVATE_DIR_MODE,
+  PRIVATE_FILE_MODE,
+  copyPrivateFile,
+  ensurePrivateDirectory,
+  tightenPathMode
+} = require('./src/utils/privateArtifacts');
 
 console.log('🍽️  Restaurant Booker Setup');
 console.log('Setting up your automated restaurant booking system...\n');
@@ -9,27 +16,32 @@ console.log('Setting up your automated restaurant booking system...\n');
 // Create necessary directories
 const directories = ['data', 'logs', 'screenshots'];
 directories.forEach(dir => {
+  const dirPath = path.join(process.cwd(), dir);
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    ensurePrivateDirectory(dirPath, PRIVATE_DIR_MODE);
     console.log(`✅ Created directory: ${dir}`);
+  } else if (tightenPathMode(dirPath, PRIVATE_DIR_MODE)) {
+    console.log(`🔒 Tightened directory permissions: ${dir}`);
   }
 });
 
 // Copy example files
 const filesToCopy = [
-  { from: 'env.example', to: '.env' },
-  { from: 'config.example.json', to: 'config.json' }
+  { from: 'env.example', to: '.env', mode: PRIVATE_FILE_MODE },
+  { from: 'config.example.json', to: 'config.json', mode: PRIVATE_FILE_MODE }
 ];
 
-filesToCopy.forEach(({ from, to }) => {
+filesToCopy.forEach(({ from, to, mode }) => {
+  const toPath = path.join(process.cwd(), to);
   if (!fs.existsSync(to)) {
     try {
-      fs.copyFileSync(from, to);
+      copyPrivateFile(path.join(process.cwd(), from), toPath, mode);
       console.log(`✅ Created ${to} from ${from}`);
     } catch (error) {
       console.log(`⚠️  Could not create ${to}: ${error.message}`);
     }
   } else {
+    tightenPathMode(toPath, mode);
     console.log(`⏭️  ${to} already exists, skipping`);
   }
 });

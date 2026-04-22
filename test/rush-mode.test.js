@@ -74,9 +74,9 @@ describe('AirMenus rush mode', () => {
       });
 
       expect(contact).toEqual({
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-        email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-        phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+        name: 'Test User',
+        email: 'test@example.com',
+        phone: '9876543210'
       });
     });
 
@@ -87,9 +87,9 @@ describe('AirMenus rush mode', () => {
         readProfileFile: () => JSON.stringify({
           profiles: {
             rush: {
-              name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-              email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-              phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+              name: 'Profile User',
+              email: 'profile@example.com',
+              phone: '9123456780'
             }
           }
         })
@@ -106,9 +106,9 @@ describe('AirMenus rush mode', () => {
         readProfileFile: () => JSON.stringify({
           profiles: {
             rush: {
-              name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-              email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-              phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+              name: 'Profile User',
+              email: 'profile@example.com',
+              phone: '9123456780'
             }
           }
         })
@@ -125,16 +125,16 @@ describe('AirMenus rush mode', () => {
       const savedContact = saveBookingProfile({
         profileName: 'sidharth',
         contact: {
-          name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-          email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-          phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+          name: 'Example User',
+          email: 'example@example.com',
+          phone: '9999999999'
         },
         readProfileFile: () => JSON.stringify({
           profiles: {
             rush: {
-              name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-              email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-              phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+              name: 'Backup User',
+              email: 'backup@example.com',
+              phone: '8888888888'
             }
           }
         }),
@@ -145,9 +145,9 @@ describe('AirMenus rush mode', () => {
 
       const parsed = JSON.parse(writtenJson);
       expect(savedContact).toEqual({
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-        email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-        phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+        name: 'Example User',
+        email: 'example@example.com',
+        phone: '9999999999'
       });
       expect(parsed.profiles.rush.email).toBe('backup@example.com');
       expect(parsed.profiles.sidharth.email).toBe('example@example.com');
@@ -157,9 +157,9 @@ describe('AirMenus rush mode', () => {
       expect(() => loadBookingContact({
         env: { BOOKING_NAME: 'Missing Fields' },
         cli: {
-          name: process.env.COMAL_BOOKING_NAME || 'Your Name',
-          email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
-          phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+          name: 'CLI User',
+          email: 'cli@example.com',
+          phone: '9999999999'
         }
       })).toThrow(/BOOKING_EMAIL|BOOKING_PHONE/i);
     });
@@ -174,7 +174,7 @@ describe('AirMenus rush mode', () => {
           return {
             outlets: [
               { id: 101, short_name: 'other' },
-              { id: 202, short_name: 'order', name: process.env.COMAL_BOOKING_NAME || 'Your Name' }
+              { id: 202, short_name: 'order', name: 'Target Outlet' }
             ]
           };
         }
@@ -204,13 +204,14 @@ describe('AirMenus rush mode', () => {
       expect(calls[0].url.toString()).toBe('https://apis.airmenus.in/api/reservations/config/202/');
     });
 
-    test('fetches remaining pax for a slot group and booking date', async () => {
-      const calls = [];
-      const client = new AirMenusApiClient({
-        request: async request => {
-          calls.push(request);
-          return { '19:00': 2 };
-        }
+	    test('fetches remaining pax for a slot group and booking date', async () => {
+	      const calls = [];
+	      const client = new AirMenusApiClient({
+	        timeoutMs: 1234,
+	        request: async request => {
+	          calls.push(request);
+	          return { '19:00': 2 };
+	        }
       });
 
       await client.getSlotRemainingPax({
@@ -221,11 +222,12 @@ describe('AirMenus rush mode', () => {
 
       const url = calls[0].url;
       expect(url.origin + url.pathname).toBe('https://apis.airmenus.in/api/reservations/slot_group/remaining/paxs/');
-      expect(url.searchParams.get('group_title')).toBe('Dinner');
-      expect(url.searchParams.get('booking_dt')).toBe('2026-04-23T13:30:00.000Z');
-      expect(url.searchParams.get('outlet_id')).toBe('202');
-    });
-  });
+	      expect(url.searchParams.get('group_title')).toBe('Dinner');
+	      expect(url.searchParams.get('booking_dt')).toBe('2026-04-23T13:30:00.000Z');
+	      expect(url.searchParams.get('outlet_id')).toBe('202');
+	      expect(calls[0].timeoutMs).toBe(1234);
+	    });
+	  });
 
   describe('AirMenus slot matching and polling', () => {
     test('finds a date setting, slot group, and requested time from reservation config', () => {
@@ -274,12 +276,12 @@ describe('AirMenus rush mode', () => {
             }
           }
         })),
-        getSlotRemainingPax: jest.fn(async () => ({
-          '17:00': 1,
-          '18:00': 2,
-          '19:00': 0
-        }))
-      };
+	        getSlotRemainingPax: jest.fn(async () => ({
+	          '17:00': '1',
+	          '18:00': '2',
+	          '19:00': '0'
+	        }))
+	      };
 
       const result = await getAvailableRushSlots({
         venue: getVenueProfile('guerilla'),
@@ -322,9 +324,35 @@ describe('AirMenus rush mode', () => {
       });
 
       expect(sleeps[0]).toBe(800);
-      expect(checks).toBe(1);
-      expect(result.available).toBe(true);
-    });
+	      expect(checks).toBe(1);
+	      expect(result.available).toBe(true);
+	    });
+
+	    test('polling timeout starts at the tight window for scheduled prewarm runs', async () => {
+	      let now = 0;
+	      let checks = 0;
+	      const sleeps = [];
+
+	      const result = await pollForAvailability({
+	        releaseAt: new Date(180000),
+	        tightPollWindowMs: 90000,
+	        timeoutMs: 60000,
+	        now: () => now,
+	        sleep: async delay => {
+	          sleeps.push(delay);
+	          now += delay;
+	        },
+	        check: async () => {
+	          checks += 1;
+	          return { '17:00': 1 };
+	        },
+	        isAvailable: response => response['17:00'] > 0
+	      });
+
+	      expect(sleeps[0]).toBe(90000);
+	      expect(checks).toBe(1);
+	      expect(result.available).toBe(true);
+	    });
 
     test('polling clamps interval, applies jitter, and returns first available result', async () => {
       let now = 0;
@@ -566,7 +594,7 @@ describe('AirMenus rush mode', () => {
       expect(click).toHaveBeenCalledTimes(1);
     });
 
-    test('time selection clicks the specific AirMenus time tile instead of a parent container', async () => {
+	    test('time selection clicks the specific AirMenus time tile instead of a parent container', async () => {
       const originalDocument = global.document;
       const tileClick = jest.fn();
       const container = {
@@ -604,9 +632,110 @@ describe('AirMenus rush mode', () => {
         global.document = originalDocument;
       }
 
-      expect(tileClick).toHaveBeenCalledTimes(1);
-      expect(container.click).not.toHaveBeenCalled();
-    });
+	      expect(tileClick).toHaveBeenCalledTimes(1);
+	      expect(container.click).not.toHaveBeenCalled();
+	    });
+
+	    test('group selection clicks the requested group card instead of a broad parent', async () => {
+	      const originalDocument = global.document;
+	      const wrongClick = jest.fn();
+	      const rightClick = jest.fn();
+	      const wrongButton = {
+	        innerText: 'BOOK',
+	        textContent: 'BOOK',
+	        click: wrongClick
+	      };
+	      const rightButton = {
+	        innerText: 'BOOK',
+	        textContent: 'BOOK',
+	        click: rightClick
+	      };
+	      const parent = {
+	        innerText: 'Table Seats BOOK Bench Seats BOOK',
+	        querySelectorAll: jest.fn(() => [wrongButton, rightButton])
+	      };
+	      const wrongCard = {
+	        innerText: 'Table Seats BOOK',
+	        querySelectorAll: jest.fn(() => [wrongButton])
+	      };
+	      const rightCard = {
+	        innerText: 'Bench Seats BOOK',
+	        querySelectorAll: jest.fn(() => [rightButton])
+	      };
+	      global.document = {
+	        querySelectorAll: jest.fn(() => [parent, wrongCard, rightCard])
+	      };
+	      const page = {
+	        evaluate: jest.fn(async (fn, value) => fn(value))
+	      };
+	      const booker = new AirMenusRushBooker({ page });
+
+	      try {
+	        await booker.clickGroupBook('Bench Seats');
+	      } finally {
+	        global.document = originalDocument;
+	      }
+
+	      expect(rightClick).toHaveBeenCalledTimes(1);
+	      expect(wrongClick).not.toHaveBeenCalled();
+	    });
+
+	    test('browser checkout retries recoverable stale UI failures after API availability', async () => {
+	      let now = 0;
+	      const page = {
+	        goto: jest.fn(async () => undefined)
+	      };
+	      const apiClient = {
+	        resolveOutlet: jest.fn(async () => ({ id: 202, short_name: 'order' })),
+	        getReservationConfig: jest.fn(async () => ({
+	          setting: {
+	            '2026-04-24': {
+	              is_open: true,
+	              slot_groups: [{
+	                title: 'Bench Seats',
+	                available_times: [{ time: '17:00' }]
+	              }]
+	            }
+	          }
+	        })),
+	        getSlotRemainingPax: jest.fn()
+	      };
+	      const injectedPoller = jest.fn(async ({ check, isAvailable }) => {
+	        now += 10;
+	        const response = await check();
+	        expect(isAvailable(response)).toBe(true);
+	        return { available: true, response, attempts: 1 };
+	      });
+	      apiClient.getSlotRemainingPax.mockResolvedValue({ '17:00': 1 });
+	      const booker = new AirMenusRushBooker({
+	        page,
+	        apiClient,
+	        pollForAvailability: injectedPoller,
+	        now: () => now
+	      });
+	      booker.prepareCheckout = jest.fn()
+	        .mockRejectedValueOnce(new Error('Time option not found: 17:00'))
+	        .mockResolvedValueOnce(undefined);
+	      booker.refreshAfterAvailability = jest.fn(async () => undefined);
+	      booker.fillCheckout = jest.fn(async () => undefined);
+	      booker.clickProceed = jest.fn(async () => undefined);
+	      booker.waitForHandoffState = jest.fn(async () => ({ type: 'none' }));
+
+	      const result = await booker.run({
+	        venue: getVenueProfile('guerilla'),
+	        date: '2026-04-24',
+	        time: '17:00',
+	        guests: 1,
+	        contact: { name: 'Test', email: 'test@example.com', phone: '9999999999' },
+	        releaseAt: new Date(0),
+	        timeoutMs: 100
+	      });
+
+	      expect(injectedPoller).toHaveBeenCalledTimes(2);
+	      expect(booker.prepareCheckout).toHaveBeenCalledTimes(2);
+	      expect(booker.refreshAfterAvailability).toHaveBeenCalledTimes(1);
+	      expect(result.status).toBe('proceed-clicked');
+	    });
 
     test('route wait failures include the target route and current page state', async () => {
       const page = {
@@ -654,7 +783,7 @@ describe('AirMenus rush mode', () => {
       expect(help).not.toMatch(/\s--phone\b/);
     });
 
-    test('Guerilla Diner shortcut reuses the rush CLI help path', () => {
+	    test('Guerilla Diner shortcut reuses the rush CLI help path', () => {
       const help = execFileSync(process.execPath, ['src/guerilla-diner.js', '--help'], {
         cwd: repoRoot,
         encoding: 'utf8',
@@ -666,7 +795,58 @@ describe('AirMenus rush mode', () => {
 
       expect(help).toContain('Rush-mode AirMenus booking helper');
       expect(help).toContain('--venue <venue>');
-      expect(help).toContain('--release-at <datetime>');
-    });
-  });
-});
+	      expect(help).toContain('--release-at <datetime>');
+	    });
+
+	    test('live rush mode forces a visible browser for payment handoff', async () => {
+	      const originalEnv = {
+	        BOOKING_NAME: process.env.BOOKING_NAME,
+	        BOOKING_EMAIL: process.env.BOOKING_EMAIL,
+	        BOOKING_PHONE: process.env.BOOKING_PHONE
+	      };
+	      process.env.BOOKING_NAME = 'Test User';
+	      process.env.BOOKING_EMAIL = 'test@example.com';
+	      process.env.BOOKING_PHONE = '9999999999';
+	      const close = jest.fn(async () => undefined);
+	      let runnerOptions;
+
+	      try {
+	        await require('../src/rush-booker').runRush({
+	          venue: 'guerilla',
+	          date: '2026-04-24',
+	          time: '17:00',
+	          guests: '1',
+	          releaseAt: '2026-04-22 20:00 Asia/Kolkata',
+	          prewarmMs: '180000',
+	          pollMs: '500',
+	          tightPollWindowMs: '90000',
+	          timeoutMs: '60000',
+	          handoffTimeoutMs: '15000',
+	          dryRun: false
+	        }, {
+	          runnerFactory: options => {
+	            runnerOptions = options;
+	            return {
+	              run: jest.fn(async () => ({
+	                status: 'handoff',
+	                timings: { marks: [] }
+	              })),
+	              close
+	            };
+	          }
+	        });
+	      } finally {
+	        Object.entries(originalEnv).forEach(([key, value]) => {
+	          if (value === undefined) {
+	            delete process.env[key];
+	          } else {
+	            process.env[key] = value;
+	          }
+	        });
+	      }
+
+	      expect(runnerOptions.browserConfig.headless).toBe(false);
+	      expect(close).toHaveBeenCalledWith({ keepOpen: true });
+	    });
+	  });
+	});

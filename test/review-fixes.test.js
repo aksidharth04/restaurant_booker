@@ -14,7 +14,7 @@ describe('review finding regressions', () => {
     expect(pkg.dependencies).not.toHaveProperty('node-cron');
   });
 
-  test('Comal helper scripts do not commit personal contact details', () => {
+	  test('Comal helper scripts do not commit personal contact details', () => {
     const scripts = fs.readdirSync(repoRoot)
       .filter(file => /^book_comal.*\.js$/.test(file))
       .map(file => path.join(repoRoot, file));
@@ -27,7 +27,22 @@ describe('review finding regressions', () => {
       expect(content).not.toMatch(/[A-Z0-9._%+-]+@gmail\.com/i);
       expect(content).not.toMatch(/\b\d{10}\b/);
     }
-  });
+	  });
+
+	  test('browser automation does not launch with sandbox-disabled or web-security-disabled flags', () => {
+	    const files = [
+	      'book_comal_robust.js',
+	      'src/services/AirMenusBooker.js',
+	      'src/services/AirMenusRushBooker.js'
+	    ];
+
+	    for (const file of files) {
+	      const content = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+	      expect(content).not.toContain('--no-sandbox');
+	      expect(content).not.toContain('--disable-setuid-sandbox');
+	      expect(content).not.toContain('--disable-web-security');
+	    }
+	  });
 
   test('AirMenusBooker selects date inputs with Puppeteer-compatible APIs', async () => {
     const AirMenusBooker = require('../src/services/AirMenusBooker');
@@ -58,7 +73,7 @@ describe('review finding regressions', () => {
     );
   });
 
-  test('AirMenusBooker closest-time fallback clicks within the page context', async () => {
+	  test('AirMenusBooker closest-time fallback clicks within the page context', async () => {
     const AirMenusBooker = require('../src/services/AirMenusBooker');
     const booker = new AirMenusBooker();
     const clicked = [];
@@ -96,7 +111,26 @@ describe('review finding regressions', () => {
     } finally {
       delete global.document;
     }
-  });
+	  });
+
+	  test('AirMenusBooker rejects non-AirMenus direct restaurant URLs', async () => {
+	    const AirMenusBooker = require('../src/services/AirMenusBooker');
+	    const booker = new AirMenusBooker();
+	    booker.page = {
+	      goto: jest.fn(),
+	      waitForSelector: jest.fn()
+	    };
+
+	    await expect(booker.navigateToRestaurant('https://example.com/phish')).rejects.toThrow(/AirMenus/);
+	    expect(booker.page.goto).not.toHaveBeenCalled();
+
+	    await expect(booker.navigateToRestaurant('https://bookings.airmenus.in/guerilladiner/order'))
+	      .resolves.toBe(true);
+	    expect(booker.page.goto).toHaveBeenCalledWith(
+	      'https://bookings.airmenus.in/guerilladiner/order',
+	      expect.any(Object)
+	    );
+	  });
 
   test('batch template command and dates are runnable from the generated output', () => {
     const outputFile = path.join(os.tmpdir(), `restaurant-booker-${Date.now()}.json`);

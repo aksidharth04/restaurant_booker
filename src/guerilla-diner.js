@@ -10,11 +10,12 @@ const {
   saveBookingProfile
 } = require('./utils/bookingContactProfile');
 
-const DEFAULT_DATE = '2026-04-24';
 const DEFAULT_TIME = '17:00';
 const DEFAULT_GUESTS = '1';
-const DEFAULT_RELEASE_AT = '2026-04-22 20:00 Asia/Kolkata';
 const DEFAULT_PROFILE = 'sidharth';
+const IST_OFFSET_MS = 330 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const FRIDAY = 5;
 
 main().catch(error => {
   console.error(`Error: ${error.message}`);
@@ -23,16 +24,19 @@ main().catch(error => {
 
 async function main() {
   const userArgs = process.argv.slice(2);
-  const selectedSlotArgs = await getSelectedSlotArgs(userArgs);
-  const args = buildDefaultArgs([...selectedSlotArgs, ...userArgs]);
+  const defaultDate = getOptionValue(userArgs, '--date') || process.env.GUERILLA_DATE || getDefaultBookingDate();
+  const baseArgs = buildDefaultArgs(userArgs, { defaultDate });
+  await ensureContactProfile([...baseArgs, ...userArgs]);
+
+  const selectedSlotArgs = await getSelectedSlotArgs(userArgs, { defaultDate });
+  const args = buildDefaultArgs([...selectedSlotArgs, ...userArgs], { defaultDate });
   const finalArgs = [...args, ...selectedSlotArgs, ...userArgs];
 
-  await ensureContactProfile(finalArgs);
   await buildProgram().parseAsync(['node', 'guerilla-diner', ...finalArgs]);
 }
 
 async function ensureContactProfile(args) {
-  if (hasAnyFlag(args, ['--help', '-h', '--dry-run'])) {
+  if (hasAnyFlag(args, ['--help', '-h'])) {
     return;
   }
 
@@ -51,20 +55,20 @@ async function ensureContactProfile(args) {
   const contact = await inquirer.prompt([
     {
       type: 'input',
-      name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+      name: 'name',
       message: 'Booking name',
       validate: value => Boolean(String(value || '').trim()) || 'Booking name is required'
     },
     {
       type: 'input',
-      name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+      name: 'email',
       message: 'Booking email',
       validate: value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()) ||
         'Enter a valid email address'
     },
     {
       type: 'input',
-      name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+      name: 'phone',
       message: 'Booking phone',
       validate: value => Boolean(String(value || '').trim()) || 'Booking phone is required'
     }
@@ -74,7 +78,7 @@ async function ensureContactProfile(args) {
   console.log(`Saved booking profile "${profileName}" to ${DEFAULT_PROFILE_PATH}`);
 }
 
-async function getSelectedSlotArgs(userArgs) {
+async function getSelectedSlotArgs(userArgs, { defaultDate }) {
   if (hasAnyFlag(userArgs, ['--help', '-h']) || getOptionValue(userArgs, '--time') || process.env.GUERILLA_TIME) {
     return [];
   }
@@ -83,7 +87,7 @@ async function getSelectedSlotArgs(userArgs) {
     return ['--time', DEFAULT_TIME];
   }
 
-  const date = getOptionValue(userArgs, '--date') || process.env.GUERILLA_DATE || DEFAULT_DATE;
+  const date = getOptionValue(userArgs, '--date') || process.env.GUERILLA_DATE || defaultDate;
   const guests = Number(getOptionValue(userArgs, '--guests') || process.env.GUERILLA_GUESTS || DEFAULT_GUESTS);
   const groupTitle = getOptionValue(userArgs, '--group-title') || process.env.GUERILLA_GROUP_TITLE;
   const venue = getVenueProfile('guerilla');
@@ -95,7 +99,7 @@ async function getSelectedSlotArgs(userArgs) {
 
   const answer = await inquirer.prompt([{
     type: 'list',
-    name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+    name: 'slot',
     message: `Select Guerilla Diner slot for ${date}`,
     pageSize: 10,
     choices: slots.map(slot => ({
@@ -107,15 +111,15 @@ async function getSelectedSlotArgs(userArgs) {
   return ['--time', answer.slot.time, '--group-title', answer.slot.groupTitle];
 }
 
-function buildDefaultArgs(overrideArgs) {
+function buildDefaultArgs(overrideArgs, { defaultDate = process.env.GUERILLA_DATE || getDefaultBookingDate() } = {}) {
   const args = [];
 
   pushDefault(args, overrideArgs, '--venue', 'guerilla');
-  pushDefault(args, overrideArgs, '--date', process.env.GUERILLA_DATE || DEFAULT_DATE);
+  pushDefault(args, overrideArgs, '--date', process.env.GUERILLA_DATE || defaultDate);
   pushDefault(args, overrideArgs, '--time', process.env.GUERILLA_TIME);
   pushDefault(args, overrideArgs, '--guests', process.env.GUERILLA_GUESTS || DEFAULT_GUESTS);
   pushDefault(args, overrideArgs, '--group-title', process.env.GUERILLA_GROUP_TITLE);
-  pushDefault(args, overrideArgs, '--release-at', process.env.GUERILLA_RELEASE_AT || DEFAULT_RELEASE_AT);
+  pushDefault(args, overrideArgs, '--release-at', process.env.GUERILLA_RELEASE_AT || getDefaultReleaseAt(defaultDate));
   pushDefault(args, overrideArgs, '--profile', process.env.GUERILLA_PROFILE || DEFAULT_PROFILE);
   pushDefault(args, overrideArgs, '--timeout-ms', process.env.GUERILLA_TIMEOUT_MS || '12000');
   pushDefault(args, overrideArgs, '--poll-ms', process.env.GUERILLA_POLL_MS || '500');
@@ -172,4 +176,33 @@ function isTrue(value) {
 
 function isFalse(value) {
   return ['0', 'false', 'no', 'off'].includes(String(value || '').toLowerCase());
+}
+
+function getDefaultBookingDate(now = new Date()) {
+  const istDate = new Date(now.getTime() + IST_OFFSET_MS);
+  const istNoon = Date.UTC(
+    istDate.getUTCFullYear(),
+    istDate.getUTCMonth(),
+    istDate.getUTCDate(),
+    12
+  );
+  const day = new Date(istNoon).getUTCDay();
+  const daysUntilFriday = (FRIDAY - day + 7) % 7;
+
+  return formatDate(new Date(istNoon + (daysUntilFriday * DAY_MS)));
+}
+
+function getDefaultReleaseAt(bookingDate) {
+  const [year, month, day] = bookingDate.split('-').map(Number);
+  const bookingNoon = Date.UTC(year, month - 1, day, 12);
+  const releaseDate = new Date(bookingNoon - (2 * DAY_MS));
+  return `${formatDate(releaseDate)} 20:00 Asia/Kolkata`;
+}
+
+function formatDate(date) {
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, '0'),
+    String(date.getUTCDate()).padStart(2, '0')
+  ].join('-');
 }

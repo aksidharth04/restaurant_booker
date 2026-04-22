@@ -50,13 +50,13 @@ class InteractiveBooker {
     return inquirer.prompt([
       {
         type: 'list',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'action',
         message: 'What would you like to do?',
         choices: [
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'book' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'favorites' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'history' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'exit' }
+          { name: 'Book a table', value: 'book' },
+          { name: 'Manage favorites', value: 'favorites' },
+          { name: 'View booking history', value: 'history' },
+          { name: 'Exit', value: 'exit' }
         ]
       }
     ]);
@@ -69,7 +69,7 @@ class InteractiveBooker {
     const useFavorite = await inquirer.prompt([
       {
         type: 'confirm',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'useFavorite',
         message: 'Would you like to use one of your favorite restaurants?',
         default: false
       }
@@ -110,7 +110,7 @@ class InteractiveBooker {
     const selectedFavorite = await inquirer.prompt([
       {
         type: 'list',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'favorite',
         message: 'Select a favorite restaurant:',
         choices: favoriteChoices
       }
@@ -120,7 +120,7 @@ class InteractiveBooker {
     const additionalDetails = await inquirer.prompt([
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'date',
         message: 'What date would you like to book?',
         default: moment().add(1, 'day').format('YYYY-MM-DD'),
         validate: (input) => {
@@ -132,7 +132,7 @@ class InteractiveBooker {
       },
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'time',
         message: 'What time would you like to book?',
         default: selectedFavorite.favorite.preferred_time,
         validate: (input) => {
@@ -144,7 +144,7 @@ class InteractiveBooker {
       },
       {
         type: 'number',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'guests',
         message: 'How many guests?',
         default: selectedFavorite.favorite.preferred_guests,
         validate: (input) => {
@@ -169,7 +169,7 @@ class InteractiveBooker {
     const questions = [
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'restaurantName',
         message: 'What\'s the name of the restaurant?',
         validate: (input) => {
           if (!input || input.trim().length === 0) {
@@ -180,13 +180,13 @@ class InteractiveBooker {
       },
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'restaurantUrl',
         message: 'Do you have the direct restaurant URL? (optional)',
         default: ''
       },
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'date',
         message: 'What date would you like to book?',
         default: moment().add(1, 'day').format('YYYY-MM-DD'),
         validate: (input) => {
@@ -210,7 +210,7 @@ class InteractiveBooker {
       },
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'time',
         message: 'What time would you like to book?',
         default: config.getBookingConfig().defaultTime,
         validate: (input) => {
@@ -222,7 +222,7 @@ class InteractiveBooker {
       },
       {
         type: 'number',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'guests',
         message: 'How many guests?',
         default: config.getBookingConfig().defaultGuests,
         validate: (input) => {
@@ -257,7 +257,7 @@ class InteractiveBooker {
     return inquirer.prompt([
       {
         type: 'confirm',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'confirm',
         message: 'Does this look correct?',
         default: true
       }
@@ -324,7 +324,7 @@ class InteractiveBooker {
       const tryAgain = await inquirer.prompt([
         {
           type: 'confirm',
-          name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+          name: 'tryAgain',
           message: 'Would you like to try booking again?',
           default: false
         }
@@ -356,7 +356,7 @@ class InteractiveBooker {
     const addToFavorites = await inquirer.prompt([
       {
         type: 'confirm',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'addToFavorites',
         message: 'Would you like to add this restaurant to your favorites?',
         default: true
       }
@@ -379,13 +379,13 @@ class InteractiveBooker {
     const action = await inquirer.prompt([
       {
         type: 'list',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'action',
         message: 'What would you like to do with favorites?',
         choices: [
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'list' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'add' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'delete' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'back' }
+          { name: 'List favorites', value: 'list' },
+          { name: 'Add favorite', value: 'add' },
+          { name: 'Delete favorite', value: 'delete' },
+          { name: 'Back to main menu', value: 'back' }
         ]
       }
     ]);
@@ -433,19 +433,19 @@ class InteractiveBooker {
     const favoriteData = await inquirer.prompt([
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'name',
         message: 'Restaurant name:',
         validate: (input) => input.trim().length > 0 ? true : 'Name is required'
       },
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'url',
         message: 'Restaurant URL:',
         validate: (input) => input.trim().length > 0 ? true : 'URL is required'
       },
       {
         type: 'input',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'preferredTime',
         message: 'Preferred time:',
         default: '19:00',
         validate: (input) => {
@@ -457,7 +457,7 @@ class InteractiveBooker {
       },
       {
         type: 'number',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'preferredGuests',
         message: 'Preferred number of guests:',
         default: 2,
         validate: (input) => {
@@ -489,7 +489,7 @@ class InteractiveBooker {
     const selected = await inquirer.prompt([
       {
         type: 'list',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'favoriteId',
         message: 'Select a favorite to delete:',
         choices: choices
       }
@@ -503,19 +503,19 @@ class InteractiveBooker {
     const options = await inquirer.prompt([
       {
         type: 'number',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'limit',
         message: 'How many bookings to show?',
         default: 10
       },
       {
         type: 'list',
-        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        name: 'status',
         message: 'Filter by status:',
         choices: [
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: '' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'confirmed' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'failed' },
-          { name: process.env.COMAL_BOOKING_NAME || 'Your Name', value: 'pending' }
+          { name: 'All statuses', value: '' },
+          { name: 'Confirmed', value: 'confirmed' },
+          { name: 'Failed', value: 'failed' },
+          { name: 'Pending', value: 'pending' }
         ]
       }
     ]);

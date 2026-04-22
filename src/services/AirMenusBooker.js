@@ -17,8 +17,6 @@ class AirMenusBooker {
       this.browser = await puppeteer.launch({
         headless: config.getBrowserConfig().headless,
         args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
@@ -133,9 +131,10 @@ class AirMenusBooker {
 
   async navigateToRestaurant(restaurantUrl) {
     try {
-      logger.info('Navigating to restaurant page', { url: restaurantUrl });
+      const url = parseAllowedRestaurantUrl(restaurantUrl);
+      logger.info('Navigating to restaurant page', { url: url.toString() });
       
-      await this.page.goto(restaurantUrl, { waitUntil: 'networkidle2' });
+      await this.page.goto(url.toString(), { waitUntil: 'networkidle2' });
       
       // Wait for page to load
       await this.page.waitForSelector('.booking-button, .reserve-button, [data-testid="book-table"]', { 
@@ -474,6 +473,28 @@ class AirMenusBooker {
       logger.info('Browser closed');
     }
   }
+}
+
+function parseAllowedRestaurantUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    throw new Error(`Invalid restaurant URL: ${error.message}`);
+  }
+
+  if (url.protocol !== 'https:' || !isAllowedAirMenusHost(url.hostname)) {
+    throw new Error('Restaurant URL must be an HTTPS AirMenus booking URL');
+  }
+
+  return url;
+}
+
+function isAllowedAirMenusHost(hostname) {
+  return hostname === 'airmenus.com' ||
+    hostname.endsWith('.airmenus.com') ||
+    hostname === 'airmenus.in' ||
+    hostname.endsWith('.airmenus.in');
 }
 
 module.exports = AirMenusBooker;

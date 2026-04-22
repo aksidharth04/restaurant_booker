@@ -1,7 +1,7 @@
 const VENUES = {
   naru: {
     key: 'naru',
-    name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+    name: 'Naru',
     bookingUrl: 'https://bookings.airmenus.in/eatnaru/order',
     brandShortName: 'eatnaru',
     outletShortName: 'order',
@@ -16,7 +16,7 @@ const VENUES = {
   },
   guerilla: {
     key: 'guerilla',
-    name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+    name: 'Guerilla Diner',
     bookingUrl: 'https://bookings.airmenus.in/guerilladiner/order',
     brandShortName: 'guerilladiner',
     outletShortName: 'order',

@@ -59,8 +59,8 @@ async function getAvailableRushSlots({
 
 function getRemainingPax(response, time) {
   const value = response?.[time] ?? response?.total_pax_left ?? response?.pax ?? 0;
-  if (typeof value === 'number') {
-    return value;
+  if (typeof value === 'number' || typeof value === 'string') {
+    return Number(value);
   }
 
   return Number(value.total_pax_left ?? value.pax ?? value.remaining ?? 0);

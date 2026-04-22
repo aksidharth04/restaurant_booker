@@ -1,5 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const {
+  PRIVATE_FILE_MODE,
+  tightenPathMode,
+  writePrivateFile
+} = require('./privateArtifacts');
 
 const DEFAULT_PROFILE_PATH = path.join(process.cwd(), '.booking-profiles.local.json');
 
@@ -68,7 +73,7 @@ function saveBookingProfile({
   if (writeProfileFile) {
     writeProfileFile(json);
   } else {
-    fs.writeFileSync(profilePath, json, { mode: 0o600 });
+    writePrivateFile(profilePath, json, PRIVATE_FILE_MODE);
   }
 
   return normalized;
@@ -87,7 +92,10 @@ function readOptionalProfileData({ profilePath, readProfileFile }) {
 }
 
 function readProfileData({ profilePath, readProfileFile }) {
-  const readFile = readProfileFile || (() => fs.readFileSync(profilePath, 'utf8'));
+  const readFile = readProfileFile || (() => {
+    tightenPathMode(profilePath, PRIVATE_FILE_MODE);
+    return fs.readFileSync(profilePath, 'utf8');
+  });
   let parsed;
 
   try {

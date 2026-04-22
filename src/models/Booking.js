@@ -1,10 +1,15 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const CryptoJS = require('crypto-js');
 const config = require('../config');
 const logger = require('../utils/logger');
+const {
+  PRIVATE_FILE_MODE,
+  ensurePrivateDirectory,
+  tightenPathMode
+} = require('../utils/privateArtifacts');
+const { redactSensitive } = require('../utils/redaction');
 
 class Booking {
   constructor() {
@@ -15,8 +20,8 @@ class Booking {
   initDatabase() {
     // Ensure data directory exists
     const dataDir = path.dirname(this.dbPath);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+    if (dataDir && dataDir !== '.') {
+      ensurePrivateDirectory(dataDir);
     }
 
     this.db = new sqlite3.Database(this.dbPath, (err) => {
@@ -24,6 +29,7 @@ class Booking {
         logger.error('Error opening database', { error: err.message });
         throw err;
       }
+      tightenPathMode(this.dbPath, PRIVATE_FILE_MODE);
       logger.info('Connected to SQLite database');
       this.createTables();
     });
@@ -111,7 +117,7 @@ class Booking {
 
       this.db.run(sql, [id, restaurantName, restaurantUrl, date, time, guests, encryptedData], function(err) {
         if (err) {
-          logger.error('Error creating booking', { error: err.message, bookingData });
+          logger.error('Error creating booking', { error: err.message, bookingData: redactSensitive(bookingData) });
           reject(err);
         } else {
           logger.info('Booking created successfully', { id, restaurantName, date, time, guests });
@@ -134,7 +140,11 @@ class Booking {
           logger.error('Error updating booking status', { error: err.message, id, status });
           reject(err);
         } else {
-          logger.info('Booking status updated', { id, status, confirmationNumber });
+          logger.info('Booking status updated', {
+            id,
+            status,
+            confirmationNumber: redactSensitive(confirmationNumber, 'confirmationNumber')
+          });
           resolve({ id, status, confirmationNumber });
         }
       });
@@ -221,7 +231,7 @@ class Booking {
 
       this.db.run(sql, [name, url, preferredTime, preferredGuests], function(err) {
         if (err) {
-          logger.error('Error adding favorite', { error: err.message, favoriteData });
+          logger.error('Error adding favorite', { error: err.message, favoriteData: redactSensitive(favoriteData) });
           reject(err);
         } else {
           logger.info('Favorite added successfully', { name, url });
