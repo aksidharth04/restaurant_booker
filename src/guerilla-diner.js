@@ -4,6 +4,11 @@ const inquirer = require('inquirer');
 const { buildProgram } = require('./rush-booker');
 const { getVenueProfile } = require('./venues/airmenusVenues');
 const { getAvailableRushSlots } = require('./utils/airmenusAvailableSlots');
+const {
+  DEFAULT_PROFILE_PATH,
+  hasBookingProfile,
+  saveBookingProfile
+} = require('./utils/bookingContactProfile');
 
 const DEFAULT_DATE = '2026-04-24';
 const DEFAULT_TIME = '17:00';
@@ -20,9 +25,53 @@ async function main() {
   const userArgs = process.argv.slice(2);
   const selectedSlotArgs = await getSelectedSlotArgs(userArgs);
   const args = buildDefaultArgs([...selectedSlotArgs, ...userArgs]);
+  const finalArgs = [...args, ...selectedSlotArgs, ...userArgs];
 
-  await buildProgram()
-    .parseAsync(['node', 'guerilla-diner', ...args, ...selectedSlotArgs, ...userArgs]);
+  await ensureContactProfile(finalArgs);
+  await buildProgram().parseAsync(['node', 'guerilla-diner', ...finalArgs]);
+}
+
+async function ensureContactProfile(args) {
+  if (hasAnyFlag(args, ['--help', '-h', '--dry-run'])) {
+    return;
+  }
+
+  const profileName = getOptionValue(args, '--profile') || DEFAULT_PROFILE;
+  if (hasBookingProfile({ profileName })) {
+    return;
+  }
+
+  if (!process.stdin.isTTY) {
+    throw new Error(
+      `Booking profile "${profileName}" is missing. ` +
+      'Run npm run guerilla-diner in an interactive terminal once to create it.'
+    );
+  }
+
+  const contact = await inquirer.prompt([
+    {
+      type: 'input',
+      name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+      message: 'Booking name',
+      validate: value => Boolean(String(value || '').trim()) || 'Booking name is required'
+    },
+    {
+      type: 'input',
+      name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+      message: 'Booking email',
+      validate: value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()) ||
+        'Enter a valid email address'
+    },
+    {
+      type: 'input',
+      name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+      message: 'Booking phone',
+      validate: value => Boolean(String(value || '').trim()) || 'Booking phone is required'
+    }
+  ]);
+
+  saveBookingProfile({ profileName, contact });
+  console.log(`Saved booking profile "${profileName}" to ${DEFAULT_PROFILE_PATH}`);
 }
 
 async function getSelectedSlotArgs(userArgs) {

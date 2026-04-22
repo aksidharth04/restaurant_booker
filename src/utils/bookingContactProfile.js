@@ -21,21 +21,84 @@ function loadBookingContact({
 }
 
 function loadProfileContact({ profileName, profilePath, readProfileFile }) {
-  const readFile = readProfileFile || (() => fs.readFileSync(profilePath, 'utf8'));
-  let parsed;
-
-  try {
-    parsed = JSON.parse(readFile());
-  } catch (error) {
-    throw new Error(`Could not read booking profile file: ${error.message}`);
-  }
-
+  const parsed = readProfileData({ profilePath, readProfileFile });
   const profile = parsed.profiles?.[profileName] || parsed[profileName];
   if (!profile) {
     throw new Error(`Booking profile not found: ${profileName}`);
   }
 
   return profile;
+}
+
+function hasBookingProfile({ profileName, profilePath = DEFAULT_PROFILE_PATH, readProfileFile } = {}) {
+  try {
+    loadBookingContact({ profileName, profilePath, readProfileFile });
+    return true;
+  } catch (error) {
+    if (
+      error.message.includes('Booking profile not found') ||
+      error.code === 'ENOENT' ||
+      error.message.includes('Missing booking contact details')
+    ) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+function saveBookingProfile({
+  profileName,
+  contact,
+  profilePath = DEFAULT_PROFILE_PATH,
+  readProfileFile,
+  writeProfileFile
+} = {}) {
+  const normalized = validateContact(contact);
+  const parsed = readOptionalProfileData({ profilePath, readProfileFile });
+  const nextProfileData = {
+    ...parsed,
+    profiles: {
+      ...(parsed.profiles || {}),
+      [profileName]: normalized
+    }
+  };
+  const json = `${JSON.stringify(nextProfileData, null, 2)}\n`;
+
+  if (writeProfileFile) {
+    writeProfileFile(json);
+  } else {
+    fs.writeFileSync(profilePath, json, { mode: 0o600 });
+  }
+
+  return normalized;
+}
+
+function readOptionalProfileData({ profilePath, readProfileFile }) {
+  try {
+    return readProfileData({ profilePath, readProfileFile });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { profiles: {} };
+    }
+
+    throw error;
+  }
+}
+
+function readProfileData({ profilePath, readProfileFile }) {
+  const readFile = readProfileFile || (() => fs.readFileSync(profilePath, 'utf8'));
+  let parsed;
+
+  try {
+    parsed = JSON.parse(readFile());
+  } catch (error) {
+    const wrappedError = new Error(`Could not read booking profile file: ${error.message}`);
+    wrappedError.code = error.code || 'INVALID_PROFILE_JSON';
+    throw wrappedError;
+  }
+
+  return parsed;
 }
 
 function validateContact(contact) {
@@ -58,5 +121,8 @@ function validateContact(contact) {
 }
 
 module.exports = {
-  loadBookingContact
+  DEFAULT_PROFILE_PATH,
+  hasBookingProfile,
+  loadBookingContact,
+  saveBookingProfile
 };

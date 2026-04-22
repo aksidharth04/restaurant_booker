@@ -121,7 +121,7 @@ Create a local-only contact profile first:
 cp .booking-profiles.local.example.json .booking-profiles.local.json
 ```
 
-Edit `.booking-profiles.local.json` with the contact details AirMenus should use. The local file is gitignored; only the placeholder example is committed.
+Edit `.booking-profiles.local.json` with the contact details AirMenus should use. The local file is gitignored; only the placeholder example is committed. You can also skip this manual step: the first live `npm run guerilla-diner` run prompts for booking name, email, and phone, saves them to `.booking-profiles.local.json`, and future runs reuse that saved profile without asking again.
 
 Use the tested Guerilla Diner shortcut:
 

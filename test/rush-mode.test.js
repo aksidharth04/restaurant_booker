@@ -1,6 +1,10 @@
 const { getVenueProfile } = require('../src/venues/airmenusVenues');
 const { resolveReleaseAt } = require('../src/utils/rushReleaseTiming');
-const { loadBookingContact } = require('../src/utils/bookingContactProfile');
+const {
+  hasBookingProfile,
+  loadBookingContact,
+  saveBookingProfile
+} = require('../src/utils/bookingContactProfile');
 const AirMenusApiClient = require('../src/services/AirMenusApiClient');
 const { findRushSlot } = require('../src/utils/airmenusSlotMatcher');
 const { getAvailableRushSlots } = require('../src/utils/airmenusAvailableSlots');
@@ -94,6 +98,59 @@ describe('AirMenus rush mode', () => {
       expect(contact.name).toBe('Profile User');
       expect(contact.email).toBe('profile@example.com');
       expect(contact.phone).toBe('9123456780');
+    });
+
+    test('detects whether a named booking profile already exists', () => {
+      expect(hasBookingProfile({
+        profileName: 'rush',
+        readProfileFile: () => JSON.stringify({
+          profiles: {
+            rush: {
+              name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+              email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
+              phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+            }
+          }
+        })
+      })).toBe(true);
+
+      expect(hasBookingProfile({
+        profileName: 'missing',
+        readProfileFile: () => JSON.stringify({ profiles: {} })
+      })).toBe(false);
+    });
+
+    test('saves a first-run local booking profile without losing existing profiles', () => {
+      let writtenJson = '';
+      const savedContact = saveBookingProfile({
+        profileName: 'sidharth',
+        contact: {
+          name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+          email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
+          phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+        },
+        readProfileFile: () => JSON.stringify({
+          profiles: {
+            rush: {
+              name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+              email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
+              phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+            }
+          }
+        }),
+        writeProfileFile: json => {
+          writtenJson = json;
+        }
+      });
+
+      const parsed = JSON.parse(writtenJson);
+      expect(savedContact).toEqual({
+        name: process.env.COMAL_BOOKING_NAME || 'Your Name',
+        email: process.env.COMAL_BOOKING_EMAIL || 'your-booking-email@example.com',
+        phone: process.env.COMAL_BOOKING_PHONE || 'your-phone-number'
+      });
+      expect(parsed.profiles.rush.email).toBe('backup@example.com');
+      expect(parsed.profiles.sidharth.email).toBe('example@example.com');
     });
 
     test('requires complete contact details without personal CLI fields', () => {
@@ -600,7 +657,11 @@ describe('AirMenus rush mode', () => {
     test('Guerilla Diner shortcut reuses the rush CLI help path', () => {
       const help = execFileSync(process.execPath, ['src/guerilla-diner.js', '--help'], {
         cwd: repoRoot,
-        encoding: 'utf8'
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GUERILLA_PROFILE: 'missing-test-profile'
+        }
       });
 
       expect(help).toContain('Rush-mode AirMenus booking helper');
