@@ -399,6 +399,33 @@ describe('AirMenus rush mode', () => {
       expect(sleeps).toEqual([250]);
     });
 
+    test('browser state verification refreshes once when the prewarmed page is stale', async () => {
+      const timings = { mark: jest.fn() };
+      const page = {
+        goto: jest.fn(async () => undefined),
+        evaluate: jest.fn()
+          .mockResolvedValueOnce(false)
+          .mockResolvedValueOnce(true)
+      };
+      const booker = new AirMenusRushBooker({
+        page,
+        now: () => 1234
+      });
+
+      await expect(booker.ensureBrowserSlotState({
+        venue: getVenueProfile('guerilla'),
+        date: '2026-04-24',
+        slot: { groupTitle: 'Bench Seats' },
+        timings
+      })).resolves.toBe(true);
+
+      expect(page.goto).toHaveBeenCalledWith(
+        expect.stringContaining('rush_refresh=1234'),
+        expect.objectContaining({ waitUntil: 'networkidle2' })
+      );
+      expect(timings.mark).toHaveBeenCalledWith('browser_refreshed_after_stale_state');
+    });
+
     test('guest selection handles AirMenus custom veg/non-veg counters', async () => {
       const originalDocument = global.document;
       const click = jest.fn();

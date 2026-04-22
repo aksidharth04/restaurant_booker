@@ -117,7 +117,7 @@ class AirMenusRushBooker {
         timings.mark('browser_fresh_after_release');
       }
 
-      await this.verifyBrowserSlotState({ date, time, slot });
+      await this.ensureBrowserSlotState({ venue, date, slot, timings });
       timings.mark('browser_state_verified');
       await this.driveToCheckout({ date, time, guests, slot });
       timings.mark('checkout_reached');
@@ -226,8 +226,27 @@ class AirMenusRushBooker {
     await this.page.goto(url.toString(), { waitUntil: 'networkidle2' });
   }
 
-  async verifyBrowserSlotState({ date, slot }) {
-    const verified = await this.page.evaluate(({ targetDate, groupTitle }) => {
+  async ensureBrowserSlotState({ venue, date, slot, timings }) {
+    if (await this.hasBrowserSlotState({ date, slot })) {
+      return true;
+    }
+
+    await this.refreshAfterAvailability(venue);
+    timings?.mark('browser_refreshed_after_stale_state');
+
+    if (await this.hasBrowserSlotState({ date, slot })) {
+      return true;
+    }
+
+    const pageState = await this.describePageState();
+    throw new Error(
+      'Browser page did not refresh to the target AirMenus date/group state. ' +
+      `Current URL: ${pageState.url}. Visible text: ${pageState.visibleText}`
+    );
+  }
+
+  async hasBrowserSlotState({ date, slot }) {
+    return this.page.evaluate(({ targetDate, groupTitle }) => {
       const bodyText = document.body.innerText || '';
       const normalizedBodyText = bodyText.toLowerCase();
       const hasGroup = normalizedBodyText.includes(String(groupTitle || '').toLowerCase());
@@ -239,12 +258,6 @@ class AirMenusRushBooker {
       targetDate: date,
       groupTitle: slot.groupTitle
     });
-
-    if (!verified) {
-      throw new Error('Browser page did not refresh to the target AirMenus date/group state');
-    }
-
-    return true;
   }
 
   async driveToCheckout({ date, time, guests, slot }) {
