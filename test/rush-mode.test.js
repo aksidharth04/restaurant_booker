@@ -3,6 +3,7 @@ const { resolveReleaseAt } = require('../src/utils/rushReleaseTiming');
 const { loadBookingContact } = require('../src/utils/bookingContactProfile');
 const AirMenusApiClient = require('../src/services/AirMenusApiClient');
 const { findRushSlot } = require('../src/utils/airmenusSlotMatcher');
+const { getAvailableRushSlots } = require('../src/utils/airmenusAvailableSlots');
 const { pollForAvailability } = require('../src/utils/pollingScheduler');
 const AirMenusRushBooker = require('../src/services/AirMenusRushBooker');
 const fs = require('fs');
@@ -196,6 +197,50 @@ describe('AirMenus rush mode', () => {
       expect(slot.group.title).toBe('Dinner');
       expect(slot.time.time).toBe('20:30');
       expect(slot.bookingDt).toBe('2026-04-23T15:00:00.000Z');
+    });
+
+    test('lists only slots with enough remaining pax for the selected date', async () => {
+      const apiClient = {
+        resolveOutlet: jest.fn(async () => ({ id: 1406 })),
+        getReservationConfig: jest.fn(async () => ({
+          setting: {
+            '2026-04-24': {
+              is_open: true,
+              slot_groups: [{
+                title: 'Bench Seats',
+                available_times: [
+                  { time: '17:00' },
+                  { time: '18:00' },
+                  { time: '19:00' }
+                ]
+              }]
+            }
+          }
+        })),
+        getSlotRemainingPax: jest.fn(async () => ({
+          '17:00': 1,
+          '18:00': 2,
+          '19:00': 0
+        }))
+      };
+
+      const result = await getAvailableRushSlots({
+        venue: getVenueProfile('guerilla'),
+        date: '2026-04-24',
+        guests: 2,
+        apiClient
+      });
+
+      expect(result.slots).toEqual([{
+        date: '2026-04-24',
+        time: '18:00',
+        groupTitle: 'Bench Seats',
+        remaining: 2
+      }]);
+      expect(apiClient.getSlotRemainingPax).toHaveBeenCalledWith(expect.objectContaining({
+        groupTitle: 'Bench Seats',
+        outletId: 1406
+      }));
     });
 
     test('polling waits until the tight release window before checking availability', async () => {
@@ -541,6 +586,7 @@ describe('AirMenus rush mode', () => {
       expect(help).toContain('--venue <venue>');
       expect(help).toContain('--release-at <datetime>');
       expect(help).toContain('--profile <name>');
+      expect(help).toContain('--group-title <title>');
       expect(help).toContain('--poll-ms <number>');
       expect(help).toContain('--tight-poll-window-ms <number>');
       expect(help).toContain('--handoff-timeout-ms <number>');

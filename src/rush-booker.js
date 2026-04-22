@@ -20,6 +20,7 @@ function buildProgram({ runnerFactory = options => new AirMenusRushBooker(option
     .requiredOption('--date <YYYY-MM-DD>', 'Booking date')
     .requiredOption('--time <HH:mm>', 'Desired booking time')
     .option('--guests <number>', 'Number of guests')
+    .option('--group-title <title>', 'Specific AirMenus slot group title')
     .option('--release-at <datetime>', 'Release time as ISO or "YYYY-MM-DD HH:mm Asia/Kolkata"')
     .option('--profile <name>', 'Ignored local booking contact profile name')
     .option('--prewarm-ms <number>', 'Milliseconds before release to prewarm browser', '180000')
@@ -106,6 +107,7 @@ function normalizeRequest(options, venue) {
   return {
     date: options.date,
     time: options.time,
+    groupTitle: options.groupTitle,
     guests,
     prewarmMs,
     pollMs,

@@ -129,17 +129,24 @@ Use the tested Guerilla Diner shortcut:
 npm run guerilla-diner
 ```
 
+By default, the shortcut checks live AirMenus availability for the configured date and opens an arrow-key slot picker in the terminal. Press Up/Down to choose a slot, then Enter to continue into the fast booking flow.
+
 For a dry run, use:
 
 ```bash
 GUERILLA_DRY_RUN=true npm run guerilla-diner
 ```
 
+To skip the slot picker, pass the time explicitly:
+
+```bash
+npm run guerilla-diner -- --time 17:00
+```
+
 Override the target without rewriting the command:
 
 ```bash
 GUERILLA_DATE=2026-04-24 \
-GUERILLA_TIME=17:00 \
 GUERILLA_GUESTS=1 \
 GUERILLA_RELEASE_AT="2026-04-22 20:00 Asia/Kolkata" \
 npm run guerilla-diner
@@ -153,6 +160,7 @@ npm run rush -- \
   --date 2026-04-24 \
   --time 17:00 \
   --guests 1 \
+  --group-title "Bench Seats" \
   --release-at "2026-04-22 20:00 Asia/Kolkata" \
   --profile sidharth \
   --headed \

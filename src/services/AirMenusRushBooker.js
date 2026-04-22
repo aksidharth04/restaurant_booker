@@ -60,6 +60,7 @@ class AirMenusRushBooker {
     venue,
     date,
     time,
+    groupTitle,
     guests,
     contact,
     releaseAt,
@@ -80,7 +81,7 @@ class AirMenusRushBooker {
       timings.mark('outlet_resolved');
 
       const reserveConfig = await this.apiClient.getReservationConfig(outlet.id);
-      const slot = findRushSlot(reserveConfig, { date, time });
+      const slot = findRushSlot(reserveConfig, { date, time, groupTitle });
       timings.mark('reservation_config_ready');
 
       await prewarmPromise;
