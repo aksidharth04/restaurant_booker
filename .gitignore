@@ -25,6 +25,8 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+data/
+screenshots/
 
 # Coverage directory used by tools like istanbul
 coverage/
@@ -100,13 +102,6 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
-
-# Uploads (keep structure but ignore content)
-setuai/setuai-backend/uploads/*
-!setuai/setuai-backend/uploads/.gitkeep
-
-# Prisma
-setuai/setuai-backend/prisma/migrations/
 
 # Local development
 *.local

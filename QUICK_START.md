@@ -23,7 +23,7 @@ This system automatically books tables at restaurants using AirMenus integration
    npm run book-interactive
    
    # Or command line
-   npm run book -- --restaurant "Restaurant Name" --date "2024-01-15" --time "19:00" --guests 4
+   npm run book -- book --restaurant "Restaurant Name" --date "2026-04-23" --time "19:00" --guests 4
    ```
 
 ## 🎯 Key Features
@@ -62,7 +62,7 @@ This system automatically books tables at restaurants using AirMenus integration
 
 ### Single Booking
 ```bash
-npm run book -- --restaurant "The Grand Restaurant" --date "2024-01-15" --time "19:30" --guests 4
+npm run book -- book --restaurant "The Grand Restaurant" --date "2026-04-23" --time "19:30" --guests 4
 ```
 
 ### Interactive Mode

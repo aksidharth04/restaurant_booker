@@ -2,9 +2,9 @@
   "name": "restaurant-booker",
   "version": "1.0.0",
   "description": "Automated restaurant table booking system with AirMenus integration",
-  "main": "src/index.js",
+  "main": "src/booker.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/booker.js",
     "book": "node src/booker.js",
     "book-interactive": "node src/interactive.js",
     "book-batch": "node src/batch-booker.js",
@@ -22,7 +22,7 @@
     "reservation",
     "table-booking"
   ],
-  "author": "Your Name",
+  "author": "Aksidharth M",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
@@ -52,10 +52,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/restaurant-booker.git"
+    "url": "git+https://github.com/aksidharth04/restaurant_booker.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/restaurant-booker/issues"
+    "url": "https://github.com/aksidharth04/restaurant_booker/issues"
   },
-  "homepage": "https://github.com/yourusername/restaurant-booker#readme"
+  "homepage": "https://github.com/aksidharth04/restaurant_booker#readme"
 }

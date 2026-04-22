@@ -38,7 +38,7 @@ console.log('\n📋 Next Steps:');
 console.log('1. Edit .env file with your AirMenus credentials');
 console.log('2. Edit config.json with your preferences');
 console.log('3. Run: npm run book-interactive');
-console.log('4. Or run: npm run book -- --restaurant "Restaurant Name" --date "2024-01-15" --time "19:00" --guests 4');
+console.log('4. Or run: npm run book -- book --restaurant "Restaurant Name" --date "2026-04-23" --time "19:00" --guests 4');
 
 console.log('\n🔧 Available Commands:');
 console.log('• npm run book-interactive    - Interactive booking mode');
