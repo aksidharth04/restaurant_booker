@@ -384,7 +384,20 @@ class AirMenusRushBooker {
   async setGuestCount(guests) {
     const updated = await this.page.evaluate(targetGuests => {
       const bodyText = document.body.innerText || '';
-      if (bodyText.includes(`${targetGuests} Guest`) || bodyText.includes(`${targetGuests} guest`)) {
+      const normalizedBodyText = bodyText.toLowerCase();
+      const hasCustomGuestCounters = [
+        'vegetarian preference',
+        'non-vegetarian preference',
+        'non vegetarian preference',
+        'male guests',
+        'female guests',
+        'number of couples'
+      ].some(label => normalizedBodyText.includes(label));
+
+      if (!hasCustomGuestCounters && (
+        bodyText.includes(`${targetGuests} Guest`) ||
+        bodyText.includes(`${targetGuests} guest`)
+      )) {
         return true;
       }
 
@@ -416,20 +429,72 @@ class AirMenusRushBooker {
         return false;
       }
 
-      const hasCustomGuestCounters = [
-        'vegetarian preference',
-        'non-vegetarian preference',
-        'male guests',
-        'female guests',
-        'number of couples'
-      ].some(label => bodyText.toLowerCase().includes(label));
-
       const clicksNeeded = hasCustomGuestCounters ? targetGuests : Math.max(0, targetGuests - 1);
+      const targetButton = hasCustomGuestCounters
+        ? findPreferredGuestButton(plusButtons, normalizedBodyText)
+        : plusButtons[0];
+
+      if (!targetButton) {
+        return false;
+      }
+
       for (let index = 0; index < clicksNeeded; index += 1) {
-        plusButtons[0].click();
+        targetButton.click();
       }
 
       return true;
+
+      function findPreferredGuestButton(buttons, pageText) {
+        if (!pageText.includes('non-vegetarian preference') &&
+            !pageText.includes('non vegetarian preference') &&
+            !pageText.includes('non-veg') &&
+            !pageText.includes('non veg')) {
+          return buttons[0];
+        }
+
+        const preferred = buttons
+          .map(button => ({ button, ...getNonVegetarianContextMatch(button) }))
+          .filter(match => match.score > 0)
+          .sort((left, right) => (
+            right.score - left.score ||
+            left.textLength - right.textLength
+          ));
+
+        if (preferred.length > 0) {
+          const first = preferred[0];
+          const second = preferred[1];
+          if (second && first.score === second.score && first.textLength === second.textLength) {
+            return buttons[1] || buttons[0];
+          }
+
+          return preferred[0].button;
+        }
+
+        return buttons[1] || buttons[0];
+      }
+
+      function getNonVegetarianContextMatch(button) {
+        let best = { score: 0, textLength: Number.MAX_SAFE_INTEGER };
+        let current = button;
+
+        for (let depth = 0; current && depth < 6; depth += 1) {
+          const text = String(current.innerText || current.textContent || '').toLowerCase();
+          let score = 0;
+          if (text.includes('non-vegetarian preference') || text.includes('non vegetarian preference')) {
+            score = 100 - depth;
+          } else if (text.includes('non-veg') || text.includes('non veg')) {
+            score = 80 - depth;
+          }
+
+          if (score > best.score || (score === best.score && text.length < best.textLength)) {
+            best = { score, textLength: text.length };
+          }
+
+          current = current.parentElement;
+        }
+
+        return best;
+      }
     }, guests);
 
     if (!updated) {

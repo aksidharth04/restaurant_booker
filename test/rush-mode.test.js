@@ -558,10 +558,22 @@ describe('AirMenus rush mode', () => {
 
     test('guest selection handles AirMenus custom veg/non-veg counters', async () => {
       const originalDocument = global.document;
-      const click = jest.fn();
-      const plusButton = {
+      const vegClick = jest.fn();
+      const nonVegClick = jest.fn();
+      const vegRow = {
+        innerText: 'With Vegetarian preference 0',
+        textContent: 'With Vegetarian preference 0',
+        parentElement: null
+      };
+      const nonVegRow = {
+        innerText: 'With Non-Vegetarian preference 0',
+        textContent: 'With Non-Vegetarian preference 0',
+        parentElement: null
+      };
+      const vegPlusButton = {
         innerText: '',
         textContent: '',
+        parentElement: vegRow,
         getAttribute: jest.fn(() => null),
         querySelector: jest.fn(selector => {
           if (selector === '[aria-label]') {
@@ -569,13 +581,26 @@ describe('AirMenus rush mode', () => {
           }
           return null;
         }),
-        click
+        click: vegClick
+      };
+      const nonVegPlusButton = {
+        innerText: '',
+        textContent: '',
+        parentElement: nonVegRow,
+        getAttribute: jest.fn(() => null),
+        querySelector: jest.fn(selector => {
+          if (selector === '[aria-label]') {
+            return { getAttribute: () => 'plus' };
+          }
+          return null;
+        }),
+        click: nonVegClick
       };
       global.document = {
         body: {
           innerText: 'Number of Guest(s) With Vegetarian preference 0 With Non-Vegetarian preference 0'
         },
-        querySelectorAll: jest.fn(() => [plusButton])
+        querySelectorAll: jest.fn(() => [vegPlusButton, nonVegPlusButton])
       };
       const page = {
         evaluate: jest.fn(async (fn, value) => fn(value))
@@ -591,7 +616,8 @@ describe('AirMenus rush mode', () => {
         global.document = originalDocument;
       }
 
-      expect(click).toHaveBeenCalledTimes(1);
+      expect(vegClick).not.toHaveBeenCalled();
+      expect(nonVegClick).toHaveBeenCalledTimes(1);
     });
 
 	    test('time selection clicks the specific AirMenus time tile instead of a parent container', async () => {
