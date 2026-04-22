@@ -9,6 +9,7 @@
     "book-interactive": "node src/interactive.js",
     "book-batch": "node src/batch-booker.js",
     "rush": "node src/rush-booker.js",
+    "guerilla-diner": "node src/guerilla-diner.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src/",

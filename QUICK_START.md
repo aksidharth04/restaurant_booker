@@ -62,6 +62,8 @@ This system automatically books tables at restaurants using AirMenus integration
 
 Rush mode help: `npm run rush -- --help`
 
+Guerilla Diner shortcut: `npm run guerilla-diner`
+
 ### Single Booking
 ```bash
 npm run book -- book --restaurant "The Grand Restaurant" --date "2026-04-23" --time "19:30" --guests 4

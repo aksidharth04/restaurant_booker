@@ -123,6 +123,30 @@ cp .booking-profiles.local.example.json .booking-profiles.local.json
 
 Edit `.booking-profiles.local.json` with the contact details AirMenus should use. The local file is gitignored; only the placeholder example is committed.
 
+Use the tested Guerilla Diner shortcut:
+
+```bash
+npm run guerilla-diner
+```
+
+For a dry run, use:
+
+```bash
+GUERILLA_DRY_RUN=true npm run guerilla-diner
+```
+
+Override the target without rewriting the command:
+
+```bash
+GUERILLA_DATE=2026-04-24 \
+GUERILLA_TIME=17:00 \
+GUERILLA_GUESTS=1 \
+GUERILLA_RELEASE_AT="2026-04-22 20:00 Asia/Kolkata" \
+npm run guerilla-diner
+```
+
+The full equivalent rush command is:
+
 ```bash
 npm run rush -- \
   --venue guerilla \

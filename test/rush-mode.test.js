@@ -502,6 +502,7 @@ describe('AirMenus rush mode', () => {
       const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
 
       expect(pkg.scripts.rush).toBe('node src/rush-booker.js');
+      expect(pkg.scripts['guerilla-diner']).toBe('node src/guerilla-diner.js');
     });
 
     test('CLI help exposes rush scheduling flags without personal-detail flags', () => {
@@ -521,6 +522,17 @@ describe('AirMenus rush mode', () => {
       expect(help).not.toMatch(/\s--name\b/);
       expect(help).not.toMatch(/\s--email\b/);
       expect(help).not.toMatch(/\s--phone\b/);
+    });
+
+    test('Guerilla Diner shortcut reuses the rush CLI help path', () => {
+      const help = execFileSync(process.execPath, ['src/guerilla-diner.js', '--help'], {
+        cwd: repoRoot,
+        encoding: 'utf8'
+      });
+
+      expect(help).toContain('Rush-mode AirMenus booking helper');
+      expect(help).toContain('--venue <venue>');
+      expect(help).toContain('--release-at <datetime>');
     });
   });
 });
