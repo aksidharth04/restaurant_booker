@@ -70,7 +70,7 @@ describe('security hardening regressions', () => {
   test('log redaction removes contact and confirmation payloads', () => {
     const redacted = redactSensitive({
       bookingData: {
-        restaurantName: 'Comal',
+        restaurantName: 'Private Bistro',
         contact: {
           name: 'Private User',
           email: 'private@example.com',
@@ -89,7 +89,7 @@ describe('security hardening regressions', () => {
     expect(serialized).not.toContain('private@example.com');
     expect(serialized).not.toContain('9876543210');
     expect(serialized).not.toContain('ABC-123');
-    expect(redacted.bookingData.restaurantName).toBe('Comal');
+    expect(redacted.bookingData.restaurantName).toBe('Private Bistro');
     expect(redacted.bookingData.contact.email).toBe(REDACTED);
   });
 
@@ -121,16 +121,16 @@ describe('security hardening regressions', () => {
 
     try {
       await expect(notificationService.sendRetryNotification({
-        restaurantName: '<b>Comal</b>',
+        restaurantName: '<b>Private Bistro</b>',
         date: '2026-04-23',
         time: '19:00<script>',
         guests: '2'
       }, 1, 3)).resolves.toBe(true);
 
       const mailOptions = sendMail.mock.calls[0][0];
-      expect(mailOptions.html).toContain('&lt;b&gt;Comal&lt;/b&gt;');
+      expect(mailOptions.html).toContain('&lt;b&gt;Private Bistro&lt;/b&gt;');
       expect(mailOptions.html).toContain('19:00&lt;script&gt;');
-      expect(mailOptions.html).not.toContain('<b>Comal</b>');
+      expect(mailOptions.html).not.toContain('<b>Private Bistro</b>');
       expect(mailOptions.html).not.toContain('19:00<script>');
     } finally {
       config.env.ENABLE_EMAIL_NOTIFICATIONS = originalEmailEnabled;
@@ -138,13 +138,36 @@ describe('security hardening regressions', () => {
     }
   });
 
-  test('robust Comal helper does not disable browser sandbox or web security', () => {
-    const script = fs.readFileSync(path.join(repoRoot, 'book_comal_robust.js'), 'utf8');
+  test('legacy Comal helper artifacts are not tracked', () => {
+    const trackedFiles = execFileSync('git', ['ls-files'], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    }).trim().split('\n');
 
-    expect(script).not.toContain('--no-sandbox');
-    expect(script).not.toContain('--disable-setuid-sandbox');
-    expect(script).not.toContain('--disable-web-security');
-    expect(script).not.toContain('chalk.bold(email)');
-    expect(script).not.toContain('chalk.bold(phone)');
+    expect(trackedFiles.filter(file => (
+      /^book_comal.*\.js$/.test(file)
+      || file === 'src/utils/comalBookingDetails.js'
+    ))).toEqual([]);
+  });
+
+  test('local config stays ignored instead of tracked', () => {
+    const trackedConfig = execFileSync('git', ['ls-files', 'config.json'], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    }).trim();
+    const ignoreRule = execFileSync('git', ['check-ignore', '-v', 'config.json'], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    }).trim();
+
+    expect(trackedConfig).toBe('');
+    expect(ignoreRule).toContain('config.json');
+  });
+
+  test('package does not carry vulnerable desktop notification UUID chain', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+
+    expect(pkg.dependencies).not.toHaveProperty('node-notifier');
+    expect(pkg.dependencies).not.toHaveProperty('uuid');
   });
 });

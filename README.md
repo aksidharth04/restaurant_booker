@@ -2,7 +2,7 @@
 
 Automated restaurant table booking utilities for AirMenus-powered booking pages.
 
-This is a Node.js CLI project. It uses Puppeteer for browser automation, SQLite for local booking history, local config files for credentials/settings, encrypted storage for optional booking metadata, and optional email or desktop notifications after booking attempts.
+This is a Node.js CLI project. It uses Puppeteer for browser automation, SQLite for local booking history, local config files for credentials/settings, encrypted storage for optional booking metadata, and optional email notifications after booking attempts.
 
 ## Features
 
@@ -12,8 +12,7 @@ This is a Node.js CLI project. It uses Puppeteer for browser automation, SQLite 
 - Favorite restaurant management
 - Local booking history in SQLite
 - Retry logic with configurable backoff
-- Optional email, push, and desktop notifications
-- Comal-specific helper scripts for direct AirMenus booking flows
+- Optional email notifications
 
 ## Requirements
 
@@ -72,8 +71,8 @@ Single booking with a direct restaurant URL:
 
 ```bash
 npm run book -- book \
-  --restaurant "Comal" \
-  --url "https://bookings.airmenus.in/comal/order" \
+  --restaurant "Guerilla Diner" \
+  --url "https://bookings.airmenus.in/guerilladiner/order" \
   --date "2026-04-23" \
   --time "19:00" \
   --guests 2
@@ -99,17 +98,6 @@ History:
 npm run book -- history --limit 10
 npm run book -- history --status confirmed
 ```
-
-Comal helper scripts:
-
-```bash
-node book_comal_manual.js
-node book_comal_simple.js
-node book_comal_final.js
-node book_comal_robust.js
-```
-
-The Comal scripts read contact details from `COMAL_BOOKING_NAME`, `COMAL_BOOKING_EMAIL`, and `COMAL_BOOKING_PHONE`; they do not store personal booking details in source. Put those values in your local `.env` file or export them in the current shell before running the scripts. Avoid prefixing commands with personal contact values, because shell history and process listings can expose them.
 
 AirMenus rush mode for Guerilla Diner or Naru:
 
@@ -183,7 +171,6 @@ Store rush-mode contact details in `.booking-profiles.local.json` or `BOOKING_NA
 │   ├── services/                 # AirMenus automation and notifications
 │   └── utils/                    # Logging helpers
 ├── test/                         # Jest tests
-├── book_comal*.js                # Comal-specific helper scripts
 ├── config.example.json           # Example app config
 ├── env.example                   # Example environment file
 ├── setup.js                      # Local setup helper

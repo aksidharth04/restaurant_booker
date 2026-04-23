@@ -15,6 +15,10 @@ const {
   parseGuestCount,
   validateGuestCount
 } = require('../src/guerilla-diner');
+const {
+  normalizeRequest,
+  runRush
+} = require('../src/rush-booker');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -65,6 +69,34 @@ describe('AirMenus rush mode', () => {
         venue: getVenueProfile('guerilla'),
         bookingDate: '2026-04-23'
       })).toThrow(/release-at/i);
+    });
+  });
+
+  describe('rush CLI input validation', () => {
+    const baseOptions = {
+      date: '2026-04-24',
+      time: '17:00',
+      guests: '1',
+      prewarmMs: '180000',
+      pollMs: '500',
+      tightPollWindowMs: '90000',
+      timeoutMs: '60000',
+      handoffTimeoutMs: '15000'
+    };
+    const venue = { defaultGuests: 2 };
+
+    test.each([
+      ['--guests', { guests: '2abc' }],
+      ['--prewarm-ms', { prewarmMs: '1x' }],
+      ['--poll-ms', { pollMs: '500ms' }],
+      ['--tight-poll-window-ms', { tightPollWindowMs: '90_000' }],
+      ['--timeout-ms', { timeoutMs: '60s' }],
+      ['--handoff-timeout-ms', { handoffTimeoutMs: '15s' }]
+    ])('rejects partial integer values for %s', (_flag, override) => {
+      expect(() => normalizeRequest({
+        ...baseOptions,
+        ...override
+      }, venue)).toThrow(/whole number/);
     });
   });
 
@@ -897,7 +929,7 @@ describe('AirMenus rush mode', () => {
 	      let runnerOptions;
 
 	      try {
-	        await require('../src/rush-booker').runRush({
+	        await runRush({
 	          venue: 'guerilla',
 	          date: '2026-04-24',
 	          time: '17:00',
@@ -934,5 +966,56 @@ describe('AirMenus rush mode', () => {
 	      expect(runnerOptions.browserConfig.headless).toBe(false);
 	      expect(close).toHaveBeenCalledWith({ keepOpen: true });
 	    });
+
+    test('live rush mode keeps the browser open after a successful proceed click', async () => {
+      const originalEnv = {
+        BOOKING_NAME: process.env.BOOKING_NAME,
+        BOOKING_EMAIL: process.env.BOOKING_EMAIL,
+        BOOKING_PHONE: process.env.BOOKING_PHONE
+      };
+      process.env.BOOKING_NAME = 'Test User';
+      process.env.BOOKING_EMAIL = 'test@example.com';
+      process.env.BOOKING_PHONE = '9999999999';
+      const close = jest.fn(async () => undefined);
+      let runnerOptions;
+
+      try {
+        await runRush({
+          venue: 'guerilla',
+          date: '2026-04-24',
+          time: '17:00',
+          guests: '1',
+          releaseAt: '2026-04-22 20:00 Asia/Kolkata',
+          prewarmMs: '180000',
+          pollMs: '500',
+          tightPollWindowMs: '90000',
+          timeoutMs: '60000',
+          handoffTimeoutMs: '15000',
+          dryRun: false
+        }, {
+          runnerFactory: options => {
+            runnerOptions = options;
+            return {
+              run: jest.fn(async () => ({
+                status: 'proceed-clicked',
+                timings: { marks: [] }
+              })),
+              close
+            };
+          }
+        });
+      } finally {
+        Object.entries(originalEnv).forEach(([key, value]) => {
+          if (value === undefined) {
+            delete process.env[key];
+          } else {
+            process.env[key] = value;
+          }
+        });
+      }
+
+      expect(runnerOptions.browserConfig.headless).toBe(false);
+      expect(close).toHaveBeenCalledWith({ keepOpen: true });
+    });
 	  });
 	});

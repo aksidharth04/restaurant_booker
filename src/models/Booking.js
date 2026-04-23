@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 const CryptoJS = require('crypto-js');
 const config = require('../config');
 const logger = require('../utils/logger');
@@ -98,7 +98,7 @@ class Booking {
 
   async create(bookingData) {
     return new Promise((resolve, reject) => {
-      const id = uuidv4();
+      const id = randomUUID();
       const {
         restaurantName,
         restaurantUrl,

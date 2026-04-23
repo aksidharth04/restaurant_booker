@@ -109,6 +109,7 @@ Thumbs.db
 
 # Local development
 *.local
+config.json
 .booking-profiles.local.json
 
 # Testing

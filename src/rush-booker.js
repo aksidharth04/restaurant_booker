@@ -63,7 +63,7 @@ async function runRush(options, { runnerFactory = runnerOptions => new AirMenusR
     printResult(result, { showTiming: Boolean(options.timing) });
     return result;
   } finally {
-    await booker.close({ keepOpen: result?.status === 'handoff' || shouldKeepBrowserOpen(options) });
+    await booker.close({ keepOpen: shouldKeepBrowserOpen(options, result) });
   }
 }
 
@@ -80,8 +80,16 @@ function buildRunnerOptions(options) {
   };
 }
 
-function shouldKeepBrowserOpen(options) {
-  return Boolean(options.headed && !options.dryRun);
+function shouldKeepBrowserOpen(options, result) {
+  if (options.dryRun) {
+    return false;
+  }
+
+  return Boolean(
+    options.headed
+    || result?.status === 'handoff'
+    || result?.status === 'proceed-clicked'
+  );
 }
 
 function normalizeRequest(options, venue) {
@@ -118,9 +126,15 @@ function normalizeRequest(options, venue) {
 }
 
 function parseInteger(value, flagName) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`${flagName} must be a number`);
+  const text = String(value ?? '').trim();
+
+  if (!/^\d+$/.test(text)) {
+    throw new Error(`${flagName} must be a whole number`);
+  }
+
+  const parsed = Number(text);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(`${flagName} must be a safe whole number`);
   }
   return parsed;
 }

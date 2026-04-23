@@ -14,24 +14,20 @@ describe('review finding regressions', () => {
     expect(pkg.dependencies).not.toHaveProperty('node-cron');
   });
 
-	  test('Comal helper scripts do not commit personal contact details', () => {
-    const scripts = fs.readdirSync(repoRoot)
-      .filter(file => /^book_comal.*\.js$/.test(file))
-      .map(file => path.join(repoRoot, file));
+  test('legacy Comal helper scripts are removed from the repo', () => {
+    const trackedFiles = execFileSync('git', ['ls-files'], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    }).trim().split('\n');
 
-    expect(scripts.length).toBeGreaterThan(0);
+    expect(trackedFiles.filter(file => (
+      /^book_comal.*\.js$/.test(file)
+      || file === 'src/utils/comalBookingDetails.js'
+    ))).toEqual([]);
+  });
 
-    for (const script of scripts) {
-      const content = fs.readFileSync(script, 'utf8');
-
-      expect(content).not.toMatch(/[A-Z0-9._%+-]+@gmail\.com/i);
-      expect(content).not.toMatch(/\b\d{10}\b/);
-    }
-	  });
-
-	  test('browser automation does not launch with sandbox-disabled or web-security-disabled flags', () => {
+  test('browser automation does not launch with sandbox-disabled or web-security-disabled flags', () => {
 	    const files = [
-	      'book_comal_robust.js',
 	      'src/services/AirMenusBooker.js',
 	      'src/services/AirMenusRushBooker.js'
 	    ];

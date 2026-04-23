@@ -1,8 +1,6 @@
 const nodemailer = require('nodemailer');
-const notifier = require('node-notifier');
 const config = require('../config');
 const logger = require('../utils/logger');
-const path = require('path'); // Added missing import for path
 const { escapeHtml } = require('../utils/htmlEscape');
 const { redactSensitive } = require('../utils/redaction');
 
@@ -149,34 +147,13 @@ class NotificationService {
       return false;
     }
 
-    try {
-      const { restaurantName, date, time, guests, status } = bookingData;
-      
-      const title = status === 'confirmed' 
-        ? `✅ Booking Confirmed`
-        : `❌ Booking Failed`;
-
-      const message = status === 'confirmed'
-        ? `Your table at ${restaurantName} for ${date} at ${time} (${guests} guests) has been confirmed!`
-        : `Failed to book table at ${restaurantName} for ${date} at ${time}`;
-
-      notifier.notify({
-        title,
-        message,
-        icon: path.join(__dirname, '../../assets/icon.png'), // Optional: add an icon
-        sound: true,
-        wait: true
-      });
-
-      logger.info('Desktop notification sent', { restaurantName, status });
-      return true;
-    } catch (error) {
-      logger.error('Failed to send desktop notification', { 
-        error: error.message,
-        bookingData: redactSensitive(bookingData)
-      });
-      return false;
-    }
+    logger.warn('Desktop notifications are disabled because the optional notifier dependency is not bundled', {
+      bookingData: {
+        restaurantName: bookingData.restaurantName,
+        status: bookingData.status
+      }
+    });
+    return false;
   }
 
   async sendNotification(bookingData) {
