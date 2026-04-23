@@ -127,7 +127,7 @@ Use the tested Guerilla Diner shortcut:
 npm run guerilla-diner
 ```
 
-By default, the shortcut checks live AirMenus availability for the configured date and opens an arrow-key slot picker in the terminal. Press Up/Down to choose a slot, then Enter to continue into the fast booking flow.
+By default, the shortcut asks how many guests to book for, checks live AirMenus availability for that count, and opens an arrow-key slot picker in the terminal. Press Up/Down to choose a slot, then Enter to continue into the fast booking flow.
 
 For a dry run, use:
 

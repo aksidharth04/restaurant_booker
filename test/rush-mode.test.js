@@ -10,6 +10,11 @@ const { findRushSlot } = require('../src/utils/airmenusSlotMatcher');
 const { getAvailableRushSlots } = require('../src/utils/airmenusAvailableSlots');
 const { pollForAvailability } = require('../src/utils/pollingScheduler');
 const AirMenusRushBooker = require('../src/services/AirMenusRushBooker');
+const {
+  getSelectedGuestArgs,
+  parseGuestCount,
+  validateGuestCount
+} = require('../src/guerilla-diner');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -809,7 +814,7 @@ describe('AirMenus rush mode', () => {
       expect(help).not.toMatch(/\s--phone\b/);
     });
 
-	    test('Guerilla Diner shortcut reuses the rush CLI help path', () => {
+    test('Guerilla Diner shortcut reuses the rush CLI help path', () => {
       const help = execFileSync(process.execPath, ['src/guerilla-diner.js', '--help'], {
         cwd: repoRoot,
         encoding: 'utf8',
@@ -823,6 +828,61 @@ describe('AirMenus rush mode', () => {
       expect(help).toContain('--venue <venue>');
 	      expect(help).toContain('--release-at <datetime>');
 	    });
+
+    test('Guerilla Diner shortcut prompts for guest count on interactive runs', async () => {
+      const prompt = jest.fn(async questions => {
+        expect(questions).toHaveLength(1);
+        expect(questions[0]).toMatchObject({
+          type: 'input',
+          name: 'guests',
+          message: 'How many guests?',
+          default: '1'
+        });
+        expect(questions[0].validate('3')).toBe(true);
+        expect(questions[0].validate('3abc')).toMatch(/whole number/);
+        expect(questions[0].validate('7')).toMatch(/between 1 and 6/);
+        return { guests: '3' };
+      });
+
+      await expect(getSelectedGuestArgs([], {
+        prompt,
+        stdin: { isTTY: true },
+        env: {}
+      })).resolves.toEqual(['--guests', '3']);
+      expect(prompt).toHaveBeenCalledTimes(1);
+    });
+
+    test('Guerilla Diner guest prompt uses env as the interactive default', async () => {
+      const prompt = jest.fn(async questions => {
+        expect(questions[0].default).toBe('2');
+        return { guests: '4' };
+      });
+
+      await expect(getSelectedGuestArgs([], {
+        prompt,
+        stdin: { isTTY: true },
+        env: { GUERILLA_GUESTS: '2' }
+      })).resolves.toEqual(['--guests', '4']);
+    });
+
+    test('Guerilla Diner guest selection keeps explicit and non-interactive paths scriptable', async () => {
+      const prompt = jest.fn();
+
+      await expect(getSelectedGuestArgs(['--guests', '2'], {
+        prompt,
+        stdin: { isTTY: true },
+        env: {}
+      })).resolves.toEqual([]);
+      await expect(getSelectedGuestArgs([], {
+        prompt,
+        stdin: { isTTY: false },
+        env: { GUERILLA_GUESTS: '5' }
+      })).resolves.toEqual(['--guests', '5']);
+      expect(parseGuestCount('6')).toBe(6);
+      expect(parseGuestCount('6.5')).toBeNull();
+      expect(validateGuestCount('0')).toMatch(/between 1 and 6/);
+      expect(prompt).not.toHaveBeenCalled();
+    });
 
 	    test('live rush mode forces a visible browser for payment handoff', async () => {
 	      const originalEnv = {

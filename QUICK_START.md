@@ -62,7 +62,7 @@ This system automatically books tables at restaurants using AirMenus integration
 
 Rush mode help: `npm run rush -- --help`
 
-Guerilla Diner shortcut with a first-run contact prompt and navigable slot picker: `npm run guerilla-diner`
+Guerilla Diner shortcut with a first-run contact prompt, per-run guest prompt, and navigable slot picker: `npm run guerilla-diner`
 
 ### Single Booking
 ```bash

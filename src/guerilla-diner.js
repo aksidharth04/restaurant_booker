@@ -12,15 +12,11 @@ const {
 
 const DEFAULT_TIME = '17:00';
 const DEFAULT_GUESTS = '1';
+const MAX_GUERILLA_GUESTS = 6;
 const DEFAULT_PROFILE = 'sidharth';
 const IST_OFFSET_MS = 330 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FRIDAY = 5;
-
-main().catch(error => {
-  console.error(`Error: ${error.message}`);
-  process.exit(1);
-});
 
 async function main() {
   const userArgs = process.argv.slice(2);
@@ -28,9 +24,11 @@ async function main() {
   const baseArgs = buildDefaultArgs(userArgs, { defaultDate });
   await ensureContactProfile([...baseArgs, ...userArgs]);
 
-  const selectedSlotArgs = await getSelectedSlotArgs(userArgs, { defaultDate });
-  const args = buildDefaultArgs([...selectedSlotArgs, ...userArgs], { defaultDate });
-  const finalArgs = [...args, ...selectedSlotArgs, ...userArgs];
+  const selectedGuestArgs = await getSelectedGuestArgs(userArgs);
+  const choiceArgs = [...selectedGuestArgs, ...userArgs];
+  const selectedSlotArgs = await getSelectedSlotArgs(choiceArgs, { defaultDate });
+  const args = buildDefaultArgs([...selectedSlotArgs, ...choiceArgs], { defaultDate });
+  const finalArgs = [...args, ...selectedSlotArgs, ...choiceArgs];
 
   await buildProgram().parseAsync(['node', 'guerilla-diner', ...finalArgs]);
 }
@@ -76,6 +74,34 @@ async function ensureContactProfile(args) {
 
   saveBookingProfile({ profileName, contact });
   console.log(`Saved booking profile "${profileName}" to ${DEFAULT_PROFILE_PATH}`);
+}
+
+async function getSelectedGuestArgs(
+  userArgs,
+  {
+    prompt = inquirer.prompt,
+    stdin = process.stdin,
+    env = process.env
+  } = {}
+) {
+  if (hasAnyFlag(userArgs, ['--help', '-h']) || getOptionValue(userArgs, '--guests')) {
+    return [];
+  }
+
+  const defaultGuests = env.GUERILLA_GUESTS || DEFAULT_GUESTS;
+  if (!stdin.isTTY) {
+    return ['--guests', defaultGuests];
+  }
+
+  const answer = await prompt([{
+    type: 'input',
+    name: 'guests',
+    message: 'How many guests?',
+    default: defaultGuests,
+    validate: validateGuestCount
+  }]);
+
+  return ['--guests', String(parseGuestCount(answer.guests))];
 }
 
 async function getSelectedSlotArgs(userArgs, { defaultDate }) {
@@ -163,6 +189,26 @@ function hasAnyFlag(args, flags) {
   return flags.some(flag => args.includes(flag));
 }
 
+function validateGuestCount(value) {
+  return parseGuestCount(value) === null
+    ? `Enter a whole number between 1 and ${MAX_GUERILLA_GUESTS}`
+    : true;
+}
+
+function parseGuestCount(value) {
+  const text = String(value || '').trim();
+  if (!/^[1-9]\d*$/.test(text)) {
+    return null;
+  }
+
+  const guests = Number(text);
+  if (!Number.isSafeInteger(guests) || guests < 1 || guests > MAX_GUERILLA_GUESTS) {
+    return null;
+  }
+
+  return guests;
+}
+
 function formatSlotTime(time) {
   const [hours, minutes] = time.split(':').map(Number);
   const suffix = hours >= 12 ? 'PM' : 'AM';
@@ -206,3 +252,16 @@ function formatDate(date) {
     String(date.getUTCDate()).padStart(2, '0')
   ].join('-');
 }
+
+if (require.main === module) {
+  main().catch(error => {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  getSelectedGuestArgs,
+  parseGuestCount,
+  validateGuestCount
+};
